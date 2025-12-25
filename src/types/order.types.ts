@@ -1,0 +1,56 @@
+export interface CartItemResponse {
+  productId: string;
+  productName: string;
+  productImage: string;
+  price: number;
+  quantity: number;
+  variantId?: string;
+  sellerId: string;
+  sellerName: string;
+  totalPrice: number;
+}
+
+export interface CreateOrderPayload {
+  addressId: string;
+  note?: string;
+  paymentMethod: "COD" | "VNPAY";
+  items: OrderItem[];
+}
+
+// DTO cho Cart (Request)
+export interface AddToCartPayload {
+  productId: string;
+  quantity: number;
+}
+
+export interface OrderItem{
+  productId: string;
+  quantity: number;
+}
+
+export interface OrderResponse {
+  userId: string
+  id: string
+  sellerId: string
+  sellerName: string
+  totalAmount: number
+  shippingFee: number
+  finalAmount: number
+  recipientName: string
+  recipientPhone: string
+  shippingAddress: string
+  status: OrderStatus
+  paymentMethod: string
+  isPreOrder: boolean
+  items: OrderItem[]
+  createdAt: string
+}
+
+export enum OrderStatus {
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  SHIPPING = "SHIPPING",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+  COMPLETED = "COMPLETED"
+}
