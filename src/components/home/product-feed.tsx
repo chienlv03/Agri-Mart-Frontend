@@ -1,18 +1,35 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ProductCard } from "@/components/shared/product-cart";
+import { ProductCard } from "@/components/product/product-cart";
 import { ChevronRight, MapPin } from "lucide-react";
 import { ProductService } from "@/services/product.service";
-import { Product } from "@/types/product.type";
+import { ProductResponse } from "@/types/product.type";
 
 export async function ProductFeed() {
-  let products: Product[] = [];
+  let products: ProductResponse[] = [];
   try {
     const res = await ProductService.getActiveProducts({ page: 0, size: 20 });
     products = res.content;
   } catch (error) {
     console.error("Lỗi tải sản phẩm:", error);
   }
+
+  const mapProductToCardProps = (p: ProductResponse) => ({
+    productId: p.id,
+    sellerId: p.sellerProfileResponse?.sellerId || "",
+    name: p.name,
+    thumbnail: p.thumbnail || "/placeholder.jpg",
+    images: p.images || [], // QUAN TRỌNG: Truyền mảng ảnh vào đây
+    price: p.price,
+    unit: p.unit,
+    location: p.sellerProfileResponse?.farmAddress || "Toàn quốc",
+    rating: p.ratingAverage || 5.0,
+    soldCount: p.soldCount || 0,
+    availableQuantity: p.availableQuantity || 0,
+    isFlashSale: false, // Map từ API nếu có
+    isPreOrder: p.isPreOrder || false,
+    expectedHarvestDate: p.expectedHarvestDate // Truyền ngày thu hoạch
+  });
 
   return (
     <div className="space-y-10">
@@ -34,15 +51,7 @@ export async function ProductFeed() {
               {products.slice(0, 5).map((product) => (
                 <ProductCard 
                     key={product.id} 
-                    product={{
-                        ...product,
-                        // Map lại dữ liệu nếu API trả về khác UI mong đợi
-                        image: product.thumbnail || "/placeholder.jpg",
-                        location: product.seller?.provinceName || "Toàn quốc",
-                        rating: product.ratingAverage || 5.0,
-                        sold: product.soldCount || 0,
-                        availableQuantity: product.availableQuantity || 0
-                    }} 
+                    product={mapProductToCardProps(product)} 
                 />
               ))}
             </div>
@@ -64,14 +73,7 @@ export async function ProductFeed() {
               {products.map((product) => (
                 <ProductCard 
                     key={`feed-${product.id}`} 
-                    product={{
-                        ...product,
-                        image: product.thumbnail || "/placeholder.jpg",
-                        location: product.seller?.provinceName || "Toàn quốc",
-                        rating: product.ratingAverage || 5.0,
-                        sold: product.soldCount || 0,
-                        availableQuantity: product.availableQuantity || 0
-                    }} 
+                    product={mapProductToCardProps(product)} 
                 />
               ))}
             </div>

@@ -48,7 +48,7 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      const response = await AuthService.sendOtp({ phoneNumber: phone });
+      const response = await AuthService.sendOtp({ phoneNumber: phone, type: "LOGIN" });
 
       toast.info(`Mã OTP test của bạn là: ${response.data.otp}`, {
         duration: 10000,
@@ -69,6 +69,15 @@ export function LoginForm() {
 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Lỗi gửi OTP");
+      const status = error.response?.status;
+      setCountdown(0);
+      if (status === 409) {
+          form.setValue("phoneNumber", ""); 
+          form.setFocus("phoneNumber"); 
+      } 
+      else {
+          form.reset();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +119,19 @@ export function LoginForm() {
 
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Đăng nhập thất bại. Kiểm tra lại mã OTP.");
+      const msg = error.response?.data?.message || "Đăng nhập thất bại. Kiểm tra lại mã OTP.";
+      toast.error(msg);
+      // Lỗi thường gặp: OTP sai hoặc hết hạn -> Xóa OTP để nhập lại
+      form.setValue("otpCode", ""); 
+      form.setFocus("otpCode");
+      setCountdown(0);
+
+      // Nếu API báo lỗi SĐT đã tồn tại (dù hãn hữu vì đã check ở bước 1)
+      if (msg.includes("Số điện thoại chưa được đăng ký") || error.response?.status === 404) {
+          setShowOtpInput(false); // Ẩn ô OTP đi
+          form.setValue("phoneNumber", ""); // Xóa SĐT
+          form.setFocus("phoneNumber"); // Focus lại SĐT
+      }
     } finally {
       setIsLoading(false);
     }

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react"; // Thêm icon ArrowLeft
 
 import {
   Form,
@@ -17,47 +17,49 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 
 import { registerSchema, RegisterSchemaType } from "@/lib/validators/auth";
 import { AuthService } from "@/services/auth.service";
-import { UserRole } from "@/types/auth.types";
 import { useAuthStore } from "@/store/useAuthStore";
-
 export function RegisterForm() {
-  const { register } = useAuthStore(); // Lấy hàm register từ store
+  const { register } = useAuthStore(); // Giữ nguyên hàm register của bạn
   const router = useRouter();
-  const [showOtpInput, setShowOtpInput] = useState(false); // Trạng thái hiện ô OTP
+  
+  const [showOtpInput, setShowOtpInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0); // Đếm ngược 60s
+  const [countdown, setCountdown] = useState(0);
 
-  // 1. Khởi tạo Form
   const form = useForm<RegisterSchemaType>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      fullName: "",
       phoneNumber: "",
-      userRole: UserRole.BUYER, // Mặc định là người mua
       otpCode: "",
     },
   });
 
-  // 2. Hàm xử lý gửi OTP
+  // --- LOGIC MỚI: Reset để quay lại bước 1 ---
+  const handleResetFlow = () => {
+    setShowOtpInput(false);
+    setCountdown(0);
+    form.setValue("otpCode", ""); // Xóa OTP
+    // Giữ nguyên fullName và phoneNumber để user sửa
+  };
+
+  // 1. Gửi OTP
   const handleSendOtp = async () => {
-    // Validate trước các trường SĐT và Tên
-    const isValid = await form.trigger(["phoneNumber", "userRole"]);
+    const isValid = await form.trigger(["fullName", "phoneNumber"]);
     if (!isValid) return;
 
     const phone = form.getValues("phoneNumber");
     setIsLoading(true);
 
     try {
-      // Gọi API gửi OTP
-      const response = await AuthService.sendOtp({ phoneNumber: phone });
+      const response = await AuthService.sendOtp({ phoneNumber: phone, type: "REGISTER" });
       
-      toast.info(`Mã OTP test của bạn là: ${response.data.otp}`, {
-        duration: 10000, // Hiện lâu chút (10s) để kịp nhìn
+      toast.info(`Mã OTP test: ${response.data.otp}`, {
+        duration: 10000,
         action: {
           label: "Copy",
           onClick: () => navigator.clipboard.writeText(response.data.otp)
@@ -65,23 +67,34 @@ export function RegisterForm() {
       });
       setShowOtpInput(true);
       
-      // Bắt đầu đếm ngược 60s
       setCountdown(60);
       const timer = setInterval(() => {
         setCountdown((prev) => {
-          if (prev <= 1) clearInterval(timer);
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
           return prev - 1;
         });
       }, 1000);
 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Lỗi gửi OTP");
+      const status = error.response?.status;
+      setCountdown(0);
+      if (status === 409) {
+          form.setValue("phoneNumber", ""); 
+          form.setFocus("phoneNumber"); 
+      } 
+      else {
+          form.reset();
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 3. Hàm xử lý Đăng ký (Submit cuối cùng)
+  // 2. Submit Đăng ký
   const onSubmit = async (values: RegisterSchemaType) => {
     if (!values.otpCode || values.otpCode.length < 6) {
       form.setError("otpCode", { message: "Vui lòng nhập đủ 6 số OTP" });
@@ -92,87 +105,71 @@ export function RegisterForm() {
     try {
       // Gọi API Đăng ký
       await AuthService.register({
+        fullName: values.fullName,
         phoneNumber: values.phoneNumber,
-        userRole: values.userRole as UserRole,
         otpCode: values.otpCode,
       });
 
-      const userRes = await AuthService.getMe(); // Cần đảm bảo axios interceptor đã gắn token vừa lưu
-      console.log("User info:", userRes.data);
+      // --- LOGIC CŨ CỦA BẠN: Gọi getMe để lấy thông tin user ---
+      const userRes = await AuthService.getMe();
       
-      // Cập nhật Global State
+      // Lưu vào Store
       register(userRes.data);
 
       toast.success("Đăng ký thành công!");
-      
-      // Chuyển hướng dựa trên vai trò
-      if (values.userRole === "SELLER") {
-        router.push("/seller/dashboard");
-      } else {
-        router.push("/");
-      }
+      router.push("/");
 
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Đăng ký thất bại");
+      const msg = error.response?.data?.message || "Đăng ký thất bại";
+      toast.error(msg);
+      
+      // Lỗi thường gặp: OTP sai hoặc hết hạn -> Xóa OTP để nhập lại
+      form.setValue("otpCode", ""); 
+      form.setFocus("otpCode");
+      setCountdown(0);
+
+      // Nếu API báo lỗi SĐT đã tồn tại (dù hãn hữu vì đã check ở bước 1)
+      if (msg.includes("tồn tại") || error.response?.status === 409) {
+          setShowOtpInput(false); // Ẩn ô OTP đi
+          form.setValue("phoneNumber", ""); // Xóa SĐT
+          form.setFocus("phoneNumber"); // Focus lại SĐT
+      }
+
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold text-green-700">Tạo Tài Khoản Mới</CardTitle>
+    <Card className="w-full max-w-md mx-auto shadow-lg border-t-4 border-t-green-600">
+      <CardHeader className="text-center relative">
+        
+        {/* NÚT QUAY LẠI (Chỉ hiện khi đang nhập OTP) */}
+        {showOtpInput && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute left-4 top-4 text-gray-500 hover:text-green-600"
+            onClick={handleResetFlow}
+            disabled={isLoading}
+            title="Sửa số điện thoại"
+            type="button"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        )}
+
+        <CardTitle className="text-2xl font-bold text-gray-800">Đăng Ký Tài Khoản</CardTitle>
         <CardDescription>
-          Nhập số điện thoại để bắt đầu kinh doanh hoặc mua sắm nông sản.
+          Nhập thông tin cá nhân để bắt đầu mua sắm.
         </CardDescription>
       </CardHeader>
+      
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            
-            {/* 1. Chọn Vai trò (Radio Group đẹp) */}
-            <FormField
-              control={form.control}
-              name="userRole"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Bạn là ai?</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="grid grid-cols-2 gap-4"
-                      disabled={showOtpInput} // Khóa lại khi đang nhập OTP
-                    >
-                      <div>
-                        <RadioGroupItem value="BUYER" id="buyer" className="peer sr-only" />
-                        <Label
-                          htmlFor="buyer"
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-green-600 [&:has([data-state=checked])]:border-green-600 cursor-pointer"
-                        >
-                          <span className="text-xl mb-1">🛒</span>
-                          Người Mua
-                        </Label>
-                      </div>
-                      <div>
-                        <RadioGroupItem value="SELLER" id="seller" className="peer sr-only" />
-                        <Label
-                          htmlFor="seller"
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-green-600 [&:has([data-state=checked])]:border-green-600 cursor-pointer"
-                        >
-                          <span className="text-xl mb-1">👩‍🌾</span>
-                          Nông Dân
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 
-            {/* 2. Nhập Họ tên
+            {/* 1. Họ và tên */}
             <FormField
               control={form.control}
               name="fullName"
@@ -180,14 +177,19 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>Họ và tên</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ví dụ: Nguyễn Văn A" {...field} disabled={showOtpInput} />
+                    <Input 
+                      placeholder="Ví dụ: Nguyễn Văn A" 
+                      className="h-11" 
+                      {...field} 
+                      disabled={showOtpInput} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-            /> */}
+            />
 
-            {/* 3. Nhập Số điện thoại */}
+            {/* 2. Số điện thoại */}
             <FormField
               control={form.control}
               name="phoneNumber"
@@ -198,8 +200,9 @@ export function RegisterForm() {
                     <Input 
                       placeholder="0988 888 888" 
                       type="tel" 
+                      className="h-11"
                       {...field} 
-                      disabled={showOtpInput} // Khóa khi đã gửi OTP
+                      disabled={showOtpInput} 
                     />
                   </FormControl>
                   <FormMessage />
@@ -207,38 +210,57 @@ export function RegisterForm() {
               )}
             />
 
-            {/* 4. Nhập OTP (Chỉ hiện khi đã gửi mã) */}
+            {/* 3. Nhập OTP */}
             {showOtpInput && (
               <FormField
                 control={form.control}
                 name="otpCode"
                 render={({ field }) => (
-                  <FormItem className="animate-in fade-in slide-in-from-top-4 duration-500">
-                    <FormLabel className="text-green-700 font-semibold">
+                  <FormItem className="animate-in fade-in slide-in-from-top-4 duration-500 bg-green-50 p-4 rounded-lg border border-green-100">
+                    <FormLabel className="text-green-800 font-semibold block text-center">
                       Nhập mã xác thực (OTP)
                     </FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Nhập 6 số OTP" 
+                        placeholder="••••••" 
                         maxLength={6} 
-                        className="text-center text-lg tracking-widest"
+                        className="text-center text-2xl tracking-[0.5em] h-12 font-bold bg-white"
                         {...field} 
+                        autoFocus
                       />
                     </FormControl>
-                    <FormMessage />
-                    <p className="text-xs text-muted-foreground text-center">
-                      Mã đã gửi về console log (giả lập Zalo). {countdown > 0 ? `Gửi lại sau ${countdown}s` : <span className="text-blue-600 cursor-pointer" onClick={() => { if(countdown === 0) handleSendOtp() }}>Gửi lại mã</span>}
-                    </p>
+                    <FormMessage className="text-center"/>
+                    
+                    <div className="flex justify-between items-center mt-3 text-xs">
+                       {/* Nút text đổi SĐT */}
+                       <span 
+                          className="text-gray-500 cursor-pointer hover:text-green-700 hover:underline"
+                          onClick={handleResetFlow}
+                       >
+                          Đổi số điện thoại?
+                       </span>
+
+                       {countdown > 0 ? (
+                        <span className="text-muted-foreground">Gửi lại sau <span className="font-bold text-orange-600">{countdown}s</span></span>
+                      ) : (
+                        <span 
+                            className="text-blue-600 cursor-pointer hover:underline font-medium" 
+                            onClick={() => { if(countdown === 0) handleSendOtp() }}
+                        >
+                            Gửi lại mã OTP
+                        </span>
+                      )}
+                    </div>
                   </FormItem>
                 )}
               />
             )}
 
-            {/* 5. Nút bấm biến hình */}
+            {/* 4. Buttons */}
             {!showOtpInput ? (
               <Button 
                 type="button" 
-                className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
+                className="w-full bg-green-600 hover:bg-green-700 text-lg py-6 shadow-md"
                 onClick={handleSendOtp}
                 disabled={isLoading}
               >
@@ -248,11 +270,11 @@ export function RegisterForm() {
             ) : (
               <Button 
                 type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6 shadow-md"
                 disabled={isLoading}
               >
                  {isLoading ? <Loader2 className="animate-spin mr-2" /> : null}
-                Đăng Ký Ngay
+                Hoàn Tất Đăng Ký
               </Button>
             )}
 

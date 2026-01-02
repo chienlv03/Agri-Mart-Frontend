@@ -1,53 +1,56 @@
 import { Header } from "@/components/shared/header";
 import { ProductGallery } from "@/components/product/product-gallery";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, ShieldCheck, Truck, MessageCircle, ShoppingCart, Star } from "lucide-react";
-import Image from "next/image";
+import {
+  MapPin, Truck, Star,
+  Calendar, PlayCircle, Package
+} from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
 import { notFound } from "next/navigation";
 import { ProductService } from "@/services/product.service";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { ProductSellerInfo } from "@/components/seller/product-seller-info";
 
-// Trang này là Server Component (Tốt cho SEO)
+// Helper format tiền tệ
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
+};
+
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  // 2. Await params để lấy ID thực sự
+
   const { id } = await params;
   let product = null;
 
   try {
-    // Gọi API lấy chi tiết sản phẩm
     product = await ProductService.getProductById(id);
   } catch (error) {
     console.error("Lỗi lấy sản phẩm:", error);
-    // Nếu API lỗi (404 Not Found), chuyển hướng sang trang 404
     return notFound();
   }
 
-  console.log(product.images)
-
-  // Nếu không có sản phẩm (null)
   if (!product) return notFound();
 
+  // Logic kiểm tra trạng thái mua hàng
+  const isOutOfStock = product.availableQuantity <= 0;
+  const isClosed = product.status === 'CLOSED' || product.status === 'SOLD_OUT';
+  const canBuy = !isOutOfStock && !isClosed && product.status === 'ACTIVE';
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
       <Header />
 
       <main className="container mx-auto max-w-6xl px-4 py-8">
-        
-        {/* --- KHU VỰC ĐIỀU HƯỚNG --- */}
-        <div className="flex flex-col gap-2 mb-6">
-          {/* Nút Quay lại */}
-          <div>
-            <BackButton /> 
-          </div>
 
-          {/* Breadcrumb (Sửa lại chút cho đẹp hơn) */}
-          <div className="text-sm text-gray-500 flex items-center gap-2">
-            <span className="hover:text-green-600 cursor-pointer">Trang chủ</span> 
+        {/* 1. BREADCRUMB & BACK */}
+        <div className="flex flex-col gap-2 mb-6">
+          <div><BackButton /></div>
+          <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
+            <span className="hover:text-green-600 cursor-pointer">Trang chủ</span>
             <span>/</span>
-            <span className="hover:text-green-600 cursor-pointer">Rau củ</span> 
+            <span className="hover:text-green-600 cursor-pointer">Sản phẩm</span>
             <span>/</span>
             <span className="text-gray-900 font-medium truncate max-w-[200px] md:max-w-none">
               {product.name}
@@ -56,137 +59,186 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          
-          {/* Cột Trái: Ảnh sản phẩm */}
+
+          {/* --- CỘT TRÁI: ẢNH SẢN PHẨM --- */}
           <div>
-            <ProductGallery 
-                images={product.images && product.images.length > 0 
-                    ? product.images 
-                    : [product.thumbnail || "/placeholder.jpg"]} 
+            <ProductGallery
+              images={product.images && product.images.length > 0
+                ? product.images
+                : [product.thumbnail || "/placeholder.jpg"]}
             />
           </div>
 
-          {/* Cột Phải: Thông tin chi tiết */}
-          <div className="flex flex-col gap-6">
-            
-            {/* Tên & Rating */}
+          {/* --- CỘT PHẢI: THÔNG TIN CHI TIẾT --- */}
+          <div className="flex flex-col gap-5">
+
+            {/* Tên & Badge */}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-              <div className="flex items-center gap-4 mt-2">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {product.isPreOrder && (
+                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200">
+                    Hàng đặt trước
+                  </Badge>
+                )}
+                {product.attributes?.instantDeliveryOnly && (
+                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">
+                    Giao hỏa tốc
+                  </Badge>
+                )}
+              </div>
+
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{product.name}</h1>
+
+              <div className="flex items-center gap-4 mt-2 text-sm">
                 <div className="flex items-center text-yellow-500">
                   <Star className="h-4 w-4 fill-current" />
-                  <span className="ml-1 font-medium text-sm pt-0.5">{product.ratingAverage}</span>
+                  <span className="ml-1 font-medium pt-0.5">{product.ratingAverage || 0}</span>
+                  <span className="text-gray-400 ml-1">({product.reviewCount || 0} đánh giá)</span>
                 </div>
                 <span className="text-gray-300">|</span>
-                <span className="text-sm text-gray-500">Đã bán {product.soldCount}</span>
-                <span className="text-gray-300">|</span>
-                {product.attributes?.certifications?.length > 0 && (
-                  <Badge variant="secondary" className="text-green-700 bg-green-100 hover:bg-green-200">
-                    {product.attributes.certifications.map(cert => cert.type).join(", ")}
-                  </Badge>
+                <span className="text-gray-500">Đã bán {product.soldCount}</span>
+              </div>
+            </div>
+
+            {/* --- QUAN TRỌNG: NGÀY THU HOẠCH (PRE-ORDER) --- */}
+            {product.isPreOrder && product.expectedHarvestDate && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-3">
+                <Calendar className="h-5 w-5 text-orange-600 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-orange-800">Dự kiến thu hoạch: {format(new Date(product.expectedHarvestDate), "dd/MM/yyyy", { locale: vi })}</p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    Đây là hàng đặt trước. Sản phẩm sẽ được gửi đi ngay sau khi thu hoạch để đảm bảo tươi ngon nhất.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Giá & Kho hàng */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+              <div className="flex items-end gap-2 mb-2">
+                <span className="text-3xl font-bold text-red-600">
+                  {formatCurrency(product.price)}
+                </span>
+                <span className="text-gray-600 font-medium mb-1">/ {product.unit}</span>
+              </div>
+
+              {/* Hiển thị số lượng tồn kho */}
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Package className="h-4 w-4" />
+                {isOutOfStock ? (
+                  <span className="text-red-600 font-medium">Hết hàng</span>
+                ) : (
+                  <span>Sẵn có: <span className="font-medium text-gray-900">{product.availableQuantity}</span> {product.unit}</span>
                 )}
               </div>
             </div>
 
-            {/* Giá tiền */}
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-red-600">
-                  {product.price.toLocaleString("vi-VN")}₫
-                </span>
-                <span className="text-gray-600 font-medium">/ {product.unit}</span>
-              </div>
-            </div>
-
-            {/* Thông tin vận chuyển & Nguồn gốc */}
+            {/* Thông tin vận chuyển */}
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div>
-                  <span className="font-medium text-gray-700">Nguồn gốc:</span>{" "}
-                  <span className="text-gray-600">{product.attributes.origin}</span>
+                  <span className="font-medium text-gray-700">Xuất xứ:</span>{" "}
+                  <span className="text-gray-600">{product.attributes?.origin || "Việt Nam"}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Truck className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div>
                   <span className="font-medium text-gray-700">Vận chuyển:</span>{" "}
-                  <span className="text-gray-600">Nhanh trong 2h (Nội thành)</span>
+                  <span className="text-gray-600">
+                    {product.attributes?.instantDeliveryOnly
+                      ? `Chỉ giao Hỏa tốc trong bán kính ${product.attributes.maxDeliveryRadius}km`
+                      : "Giao hàng tiêu chuẩn toàn quốc"}
+                  </span>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="h-5 w-5 text-green-600 mt-0.5" />
-                <span className="text-green-700">Cam kết hoàn tiền nếu sản phẩm hư hỏng</span>
               </div>
             </div>
 
             <Separator />
 
-            {/* Thông tin người bán (Seller) */}
-            <div className="flex items-center gap-4 p-4 border rounded-lg bg-white shadow-sm">
-              <div className="relative h-12 w-12 rounded-full overflow-hidden border">
-                <Image 
-                    src={product.seller?.avatar || "https://github.com/shadcn.png"} 
-                    alt={product.seller?.name || "Người bán"} 
-                    fill 
-                    sizes="20"
-                    className="object-cover"
-                    unoptimized
-                />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900">{product.seller.name}</h3>
-                <p className="text-xs text-gray-500 flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> {product.seller?.provinceName || "Toàn quốc"}
-                </p>
-              </div>
-              <Button variant="outline" size="sm" className="gap-2 text-green-700 border-green-200 hover:bg-green-50">
-                <MessageCircle className="h-4 w-4" /> Chat ngay
-              </Button>
-            </div>
-
-            {/* Nút hành động */}
-            <div className="flex gap-4 mt-auto">
-              <Button variant="outline" size="lg" className="flex-1 border-green-600 text-green-700 hover:bg-green-50 h-12 text-base">
-                <ShoppingCart className="mr-2 h-5 w-5" /> Thêm vào giỏ
-              </Button>
-              <Button size="lg" className="flex-1 bg-green-600 hover:bg-green-700 h-12 text-base shadow-lg shadow-green-200">
-                Mua ngay
-              </Button>
-            </div>
+            {/* --- THÔNG TIN NGƯỜI BÁN CHI TIẾT --- */}
+            <ProductSellerInfo 
+                product={product} 
+                canBuy={canBuy} 
+                isOutOfStock={isOutOfStock} 
+            />
 
           </div>
         </div>
 
-        {/* Tab Mô tả & Đánh giá */}
+        {/* --- TABS: MÔ TẢ & VIDEO --- */}
         <div className="mt-12 bg-white rounded-xl shadow-sm border p-6">
           <Tabs defaultValue="description">
-            <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-              <TabsTrigger value="description">Mô tả sản phẩm</TabsTrigger>
-              <TabsTrigger value="reviews">Đánh giá ({product.reviewCount || 0})</TabsTrigger>
+            <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
+              <TabsTrigger
+                value="description"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-green-600 data-[state=active]:text-green-700 px-6 py-3"
+              >
+                Mô tả sản phẩm
+              </TabsTrigger>
+              {/* Chỉ hiện Tab Video nếu có video */}
+              {product.videos && product.videos.length > 0 && (
+                <TabsTrigger
+                  value="video"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-green-600 data-[state=active]:text-green-700 px-6 py-3 flex items-center gap-2"
+                >
+                  <PlayCircle className="w-4 h-4" /> Video thực tế
+                </TabsTrigger>
+              )}
+              <TabsTrigger
+                value="reviews"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-green-600 data-[state=active]:text-green-700 px-6 py-3"
+              >
+                Đánh giá ({product.reviewCount || 0})
+              </TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="description" className="mt-6 space-y-4">
-              <h3 className="font-bold text-lg">Chi tiết sản phẩm</h3>
-              <div className="prose max-w-none text-gray-600 whitespace-pre-line leading-relaxed">
+
+            {/* CONTENT: MÔ TẢ */}
+            <TabsContent value="description" className="mt-6 space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="prose max-w-none text-gray-700 whitespace-pre-line leading-relaxed">
                 {product.description}
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-4 text-sm bg-gray-50 p-4 rounded-lg max-w-xl">
-                <div><span className="font-medium">Loại sản phẩm:</span> Rau củ quả</div>
-                <div><span className="font-medium">Hạn sử dụng:</span> {product.attributes.expiryDays} ngày</div>
-                <div><span className="font-medium">Bảo quản:</span> {product.attributes?.preservation}</div>
-                <div>
-                   <span className="font-medium">Chứng nhận:</span>{" "}
-                   {product.attributes.certifications?.length > 0 
-                     ? product.attributes.certifications.map(cert => cert.type).join(", ") 
-                     : "Chưa có"}
-                </div>
-                <div><span className="font-medium">Quy cách:</span> {product.unit}</div>
+
+              {/* Bảng thông số kỹ thuật nhỏ */}
+              <div className="mt-8 border rounded-lg overflow-hidden max-w-2xl">
+                <table className="w-full text-sm text-left">
+                  <tbody className="divide-y">
+                    <tr className="bg-gray-50"><td className="p-3 font-medium w-1/3">Loại sản phẩm</td><td className="p-3">Nông sản sạch</td></tr>
+                    <tr><td className="p-3 font-medium">Hạn sử dụng</td><td className="p-3">{product.attributes?.expiryDays} ngày</td></tr>
+                    <tr className="bg-gray-50"><td className="p-3 font-medium">Bảo quản</td><td className="p-3">{product.attributes?.preservation}</td></tr>
+                    <tr><td className="p-3 font-medium">Chứng nhận</td><td className="p-3">
+                      {product.attributes?.certifications?.map(c => c.type).join(", ") || "Đang cập nhật"}
+                    </td></tr>
+                  </tbody>
+                </table>
               </div>
             </TabsContent>
-            
+
+            {/* CONTENT: VIDEO */}
+            {product.videos && product.videos.length > 0 && (
+              <TabsContent value="video" className="mt-6 animate-in fade-in slide-in-from-bottom-2">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {product.videos.map((videoUrl, idx) => (
+                    <div key={idx} className="aspect-video bg-black rounded-lg overflow-hidden shadow-md">
+                      <video
+                        src={videoUrl}
+                        controls
+                        className="w-full h-full object-contain"
+                        poster={product.thumbnail} // Dùng thumbnail làm ảnh bìa video
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500 mt-2 italic">* Video được quay thực tế tại vườn.</p>
+              </TabsContent>
+            )}
+
             <TabsContent value="reviews" className="mt-6">
-              <p className="text-gray-500 italic">Chức năng đánh giá đang được phát triển...</p>
+              <div className="flex flex-col items-center justify-center py-10 text-gray-500">
+                <Star className="w-10 h-10 mb-2 text-gray-300" />
+                <p>Chức năng đánh giá đang được phát triển.</p>
+              </div>
             </TabsContent>
           </Tabs>
         </div>

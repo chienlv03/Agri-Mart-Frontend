@@ -1,4 +1,4 @@
-export enum UserRole {
+export enum Role {
   BUYER = "BUYER",
   SELLER = "SELLER",
   ADMIN = "ADMIN",
@@ -10,13 +10,13 @@ export interface UserStatus {
 
 export interface SendOtpRequest {
   phoneNumber: string;
+  type: "REGISTER" | "LOGIN";
 }
 
 export interface RegisterRequest {
   phoneNumber: string;
   otpCode: string;
-  // fullName: string;
-  userRole: UserRole;
+  fullName: string;
 }
 
 export interface LoginRequest {

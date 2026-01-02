@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ProductService } from "@/services/product.service";
-import { Product } from "@/types/product.type";
+import { ProductResponse } from "@/types/product.type";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Check, X, Eye, Loader2 } from "lucide-react";
@@ -11,9 +11,10 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ProductDetailDialog } from "@/components/admin/product-detail-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { format } from "date-fns";
 
 export default function ProductApprovalPage() {
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<ProductResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [page, setPage] = useState(0); // Trang hiện tại
@@ -29,7 +30,6 @@ export default function ProductApprovalPage() {
                 sortBy: "createdAt",
                 order: "asc"
             });
-            console.log(res.content);
             setProducts(res.content);
             setTotalPages(res.totalPages);
         } catch (error) {
@@ -58,7 +58,7 @@ export default function ProductApprovalPage() {
 
         } catch (error) {
             console.error(error);
-            toast.error("Thao tác thất bại");
+            toast.error(error instanceof Error ? error.message : "Có lỗi xảy ra, vui lòng thử lại");
         } finally {
             setProcessingId(null);
         }
@@ -121,9 +121,9 @@ export default function ProductApprovalPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <div className="relative h-6 w-6 rounded-full overflow-hidden border">
-                                                <Image src={p.seller?.avatar || "/placeholder.jpg"} alt="" fill className="object-cover" unoptimized />
+                                                <Image src={p.sellerProfileResponse?.avatarUrl || "/placeholder.jpg"} alt="" fill className="object-cover" unoptimized />
                                             </div>
-                                            <span className="text-sm font-medium">{p.seller?.name}</span>
+                                            <span className="text-sm font-medium">{p.sellerProfileResponse?.fullName}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="font-bold text-red-600">
@@ -131,7 +131,7 @@ export default function ProductApprovalPage() {
                                     </TableCell>
                                     <TableCell className="text-sm text-gray-500">
                                         {/* Cần xử lý hiển thị ngày tùy format backend */}
-                                        {new Date(p.createdAt).toLocaleDateString()}
+                                        {format(new Date(p.createdAt), "dd/MM/yyyy")}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">

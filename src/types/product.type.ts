@@ -1,4 +1,4 @@
-import { Certification } from "@/types/user.type";
+import { Certification, SellerInfo } from "@/types/user.type";
 
 export interface Category {
   id: string;
@@ -9,73 +9,116 @@ export interface Category {
   isActive: boolean;
 }
 
+// 1. Các thuộc tính đặc thù (ProductAttribute)
 export interface ProductAttribute {
-  origin: string;
-  harvestDate: string; // Backend trả về Instant (ISO String)
-  expiryDays: number;
-  preservation: string;
-  certifications: Certification[];
+  origin?: string;
+  expiryDays?: number;
+  preservation?: string;
+  instantDeliveryOnly?: boolean;
+  maxDeliveryRadius?: number; // Nullable
+  // Garden Location nếu cần map (GeoJSON)
+  gardenLocation?: {
+    x: number; // Longitude
+    y: number; // Latitude
+  } | null;
+  certifications?: Certification[]; // Mảng chứng chỉ (VietGAP, OCOP, ...)
 }
 
-export interface SellerInfo {
-  id: string;
-  name: string;
-  avatar: string;
-  provinceName?: string;
-}
-
-export interface Product {
+// 3. Product Response (Dữ liệu hiển thị)
+export interface ProductResponse {
   id: string;
   sku: string;
   name: string;
   slug: string;
   description?: string;
-
-  categoryIds: string[];
-  tags?: string[];
-
-  // Media
+  
+  price: number;
+  unit: string;
+  weight: number;      // Quan trọng: Cân nặng tính ship
+  availableQuantity: number; // Số lượng tồn kho (lấy từ Inventory)
+  
   thumbnail?: string;
-  images?: string[];
-  videos?: string[];
-
-  // Embedded seller
-  seller: SellerInfo;
-
-  // Giá cơ bản
-  price?: number;
-  originalPrice?: number;
-  unit?: string;
-  availableQuantity?: number;
-
-  // Biến thể
-  variants?: ProductVariant[];
-
-  // Thuộc tính nông sản
+  images: string[];
+  videos: string[];
+  
+  isPreOrder: boolean;
+  expectedHarvestDate?: string; // ISO String
+  
   attributes?: ProductAttribute;
+  sellerProfileResponse?: SellerInfo;
+  
+  status: ProductStatus;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  // Chỉ số
+export interface CreateProductRequest {
+  name: string;
+  description?: string;
+  price: number;
+  unit: string;
+  weight: number;
+  quantity: number; // Số lượng ban đầu để init kho
+  
+  categoryIds: string[];
+  
+  isPreOrder?: boolean;
+  expectedHarvestDate?: string | null; // ISO String
+  
+  attributes?: ProductAttribute;
+}
+
+// 5. Update Request (Dữ liệu gửi lên khi sửa)
+export interface UpdateProductRequest {
+  name?: string;
+  description?: string;
+  price?: number;
+  unit?: string;
+  weight?: number;
+  quantity?: number; // Số lượng MỚI (để backend tính delta)
+  
+  categoryIds?: string[];
+  
+  isPreOrder?: boolean;
+  expectedHarvestDate?: string | null;
+  
+  attributes?: ProductAttribute;
+  
+  // Logic giữ lại Media cũ
+  keepImages?: string[];
+  keepVideos?: string[];
+}
+
+export interface ProductResponse {
+  id: string;
+  sku: string;
+  name: string;
+  slug: string;
+  description?: string;
+  
+  price: number;
+  unit: string;
+  weight: number;      // Quan trọng: Cân nặng tính ship
+  availableQuantity: number; // Số lượng tồn kho (lấy từ Inventory)
+  
+  thumbnail?: string;
+  images: string[];
+  videos: string[];
+  
+  isPreOrder: boolean;
+  expectedHarvestDate?: string; // ISO String
+
   ratingAverage: number;
   reviewCount: number;
   soldCount: number;
   viewCount: number;
-
-  // Trạng thái
+  
+  attributes?: ProductAttribute;
+  sellerProfileResponse?: SellerInfo;
+  
   status: ProductStatus;
-  isFeatured: boolean;
-
-  createdAt: string; // Instant -> ISO string
-  updatedAt: string; // Instant -> ISO string
-}
-
-export interface ProductVariant {
-  variantId?: string;
-  sku: string;
-  name: string;        // ví dụ: 1kg, 2kg
-  price: number;
-  originalPrice?: number;
-  stockQuantity: number;
-  images?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PageResponse<T> {
@@ -88,7 +131,7 @@ export interface PageResponse<T> {
 }
 
 // Các Enum trạng thái sản phẩm (Khớp với Java ProductStatus)
-export type ProductStatus = "ACTIVE" | "PENDING" | "REJECTED";
+export type ProductStatus = 'ACTIVE' | 'PENDING' | 'REJECTED' | 'CLOSED' | 'SOLD_OUT' | 'DELETED';
 
 // Interface cho tham số phân trang/sắp xếp
 export interface ProductSearchParams {

@@ -4,13 +4,13 @@ export interface CartItemResponse {
   productImage: string;
   price: number;
   quantity: number;
-  variantId?: string;
   sellerId: string;
   sellerName: string;
   totalPrice: number;
 }
 
 export interface CreateOrderPayload {
+  orderType: "BUY_NOW" | "FROM_CART";
   addressId: string;
   note?: string;
   paymentMethod: "COD" | "VNPAY";
@@ -24,8 +24,12 @@ export interface AddToCartPayload {
 }
 
 export interface OrderItem{
+  id: string;
   productId: string;
   quantity: number;
+  productName: string;
+  price: number;
+  productImage: string;
 }
 
 export interface OrderResponse {

@@ -4,9 +4,8 @@ import { CreateOrderPayload, OrderResponse, OrderStatus } from "@/types/order.ty
 export const OrderService = {
   // Hàm gọi API tạo đơn
   createOrder: async (payload: CreateOrderPayload) => {
-    // API trả về List<String> (Danh sách mã đơn hàng)
     const response = await apiClient.post<string[]>("/orders", payload);
-    return response.data; 
+    return response.data;
   },
 
   getOrderBySeller: async () => {
@@ -26,6 +25,11 @@ export const OrderService = {
 
   // 2. Người mua tự hủy đơn (Chỉ áp dụng cho đơn PENDING)
   cancelOrder: async (orderId: string) => {
-    await apiClient.patch(`/orders/${orderId}/cancel`);
-  }
-};
+    await apiClient.put(`/orders/${orderId}/cancel`);
+  },
+
+  getOrderById: async (orderId: string) => {
+    const response = await apiClient.get<OrderResponse>(`/orders/${orderId}`);
+    return response.data;
+  },
+}

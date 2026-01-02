@@ -10,7 +10,7 @@ interface AuthState {
   register: (user: User) => void;
   login: (user: User) => void;
   logout: () => void;
-  updateSellerProfile: (user: User) => void;
+  saveSellerProfile: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isAuthenticated: false, user: null });
       },
 
-      updateSellerProfile: (user) => set({
+      saveSellerProfile: (user) => set({
         user: {
           ...user,
           fullName: user.fullName,

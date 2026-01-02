@@ -1,34 +1,26 @@
-import { PageResponse, Product, ProductSearchParams, ProductStatus } from "@/types/product.type";
+import { CreateProductRequest, PageResponse, ProductResponse, ProductSearchParams, ProductStatus, UpdateProductRequest } from "@/types/product.type";
 import apiClient from "@/lib/axios";
 
 export const ProductService = {
-  // 1. API Tạo sản phẩm (ROLE_SELLER)
-  // Endpoint: POST /api/v1/products
-  // Body: FormData (data: json, images: file[], videos: file[])
-  createProduct: async (formData: FormData) => {
-    return await apiClient.post<Product>("/products", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-  },
 
   // 3. API Xem chi tiết theo ID (Public)
   // Endpoint: GET /api/v1/products/{id}
   getProductById: async (id: string) => {
-    const res = await apiClient.get<Product>(`/products/${id}`);
+    const res = await apiClient.get<ProductResponse>(`/products/${id}`);
     return res.data;
   },
 
   // 4. API Xem chi tiết theo Slug (Public - SEO)
   // Endpoint: GET /api/v1/products/slug/{slug}
   getProductBySlug: async (slug: string) => {
-    const res = await apiClient.get<Product>(`/products/slug/${slug}`);
+    const res = await apiClient.get<ProductResponse>(`/products/slug/${slug}`);
     return res.data;
   },
 
   // 5. API Lấy sản phẩm của tôi (ROLE_SELLER)
   // Endpoint: GET /api/v1/products/seller/me
   getMyProducts: async (params?: ProductSearchParams) => {
-    const res = await apiClient.get<PageResponse<Product>>("/products/seller/me", {
+    const res = await apiClient.get<PageResponse<ProductResponse>>("/products/seller/me", {
       params: {
         page: params?.page || 0,
         size: params?.size || 10,
@@ -40,7 +32,7 @@ export const ProductService = {
   // 6. API Lấy sản phẩm ACTIVE cho trang chủ (Public)
   // Endpoint: GET /api/v1/products/active
   getActiveProducts: async (params?: ProductSearchParams) => {
-    const res = await apiClient.get<PageResponse<Product>>("/products/active", {
+    const res = await apiClient.get<PageResponse<ProductResponse>>("/products/active", {
       params: {
         page: params?.page || 0,
         size: params?.size || 10,
@@ -54,7 +46,7 @@ export const ProductService = {
   // 7. API Lấy sản phẩm PENDING cho Admin duyệt (ROLE_ADMIN)
   // Endpoint: GET /api/v1/products/pending
   getPendingProducts: async (params?: ProductSearchParams) => {
-    const res = await apiClient.get<PageResponse<Product>>("/products/pending", {
+    const res = await apiClient.get<PageResponse<ProductResponse>>("/products/pending", {
       params: {
         page: params?.page || 0,
         size: params?.size || 10,
@@ -78,10 +70,88 @@ export const ProductService = {
     return await apiClient.delete<void>(`/products/${id}`);
   },
 
+  createProduct: async (
+    data: CreateProductRequest,
+    images: File[],
+    videos: File[] = []
+  ): Promise<void> => {
+    const formData = new FormData();
 
-  updateProduct: async (id: string, formData: FormData) => {
-    return await apiClient.put<Product>(`/products/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+    // 1. Đóng gói JSON data
+    // Backend yêu cầu @RequestPart("data") là JSON
+    const jsonBlob = new Blob([JSON.stringify(data)], {
+      type: "application/json",
     });
-  }
+    formData.append("data", jsonBlob);
+
+    // 2. Append Images
+    images.forEach((file) => {
+      formData.append("images", file);
+    });
+
+    // 3. Append Videos
+    videos.forEach((file) => {
+      formData.append("videos", file);
+    });
+
+    // Gọi API POST
+    await apiClient.post("/products", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  /**
+   * Cập nhật sản phẩm (Multipart/form-data)
+   * @param id ID sản phẩm
+   * @param data Object thông tin cập nhật
+   * @param newImages Mảng File ảnh MỚI thêm vào
+   * @param newVideos Mảng File video MỚI thêm vào
+   */
+  updateProduct: async (
+    id: string,
+    data: UpdateProductRequest,
+    newImages: File[] = [],
+    newVideos: File[] = []
+  ): Promise<void> => {
+    const formData = new FormData();
+
+    // 1. Đóng gói JSON data
+    const jsonBlob = new Blob([JSON.stringify(data)], {
+      type: "application/json",
+    });
+    formData.append("data", jsonBlob);
+
+    // 2. Append New Images (nếu có)
+    if (newImages.length > 0) {
+      newImages.forEach((file) => {
+        formData.append("images", file);
+      });
+    }
+
+    // 3. Append New Videos (nếu có)
+    if (newVideos.length > 0) {
+      newVideos.forEach((file) => {
+        formData.append("videos", file);
+      });
+    }
+
+    // Gọi API PUT
+    await apiClient.put(`/products/${id}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  async getProductsBySeller(sellerId: string, page = 0, size = 12) {
+    const res = await apiClient.get(`/products/shop/${sellerId}`, {
+        params: {
+            page: page,
+            size: size
+        }
+    });
+    return res.data;
+  },
 };

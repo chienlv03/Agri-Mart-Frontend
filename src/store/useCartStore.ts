@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { CartService } from '@/services/cart.service';
 import { CartItemResponse } from '@/types/order.types';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface CartState {
   items: CartItemResponse[];
@@ -39,7 +40,13 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   // 2. Thêm vào giỏ
   addToCart: async (productId, quantity) => {
-    // Optimistic Update (Tùy chọn): Cập nhật UI trước cho mượt (nhưng ở đây làm chuẩn là gọi API xong mới load lại)
+    const currentUser = useAuthStore.getState().user;
+    const existingItem = get().items.find((i) => i.productId === productId);
+
+    if (existingItem && currentUser?.id === existingItem.sellerId) {
+        toast.error("Bạn không thể mua sản phẩm của chính mình!");
+        return; // Dừng luôn, không gọi API
+    }
     try {
       await CartService.addToCart({ productId, quantity });
       

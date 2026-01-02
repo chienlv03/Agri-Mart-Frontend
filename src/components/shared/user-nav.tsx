@@ -16,10 +16,14 @@ import { useRouter } from "next/navigation";
 import { LogOut, User, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import { AuthService } from "@/services/auth.service";
+import { Role } from "@/types/auth.types";
 
 export function UserNav() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
+
+  const isSeller = user?.roles?.includes(Role.SELLER);
+  const isAdmin = user?.roles?.includes(Role.ADMIN);
 
   // Hàm xử lý Đăng xuất
   const handleLogout = async () => {
@@ -35,8 +39,14 @@ export function UserNav() {
     }
   };
 
-  // Lấy chữ cái đầu của tên để hiển thị nếu không có ảnh
-  const initials = user?.avatarUrl ? user.fullName.charAt(0) : "User";
+  const avatarName = user?.fullName
+    ? user.fullName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+    : "";
+
 
   return (
     <DropdownMenu>
@@ -46,7 +56,7 @@ export function UserNav() {
             {/* Nếu có avatarUrl thì hiện, không thì hiện fallback */}
             <AvatarImage src={user?.avatarUrl} alt={"avatar"} />
             <AvatarFallback className="bg-green-100 text-green-700 font-bold">
-              {initials}
+              {avatarName}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -59,7 +69,7 @@ export function UserNav() {
               {user?.phone}
             </p>
             <span className="text-xs text-green-600 font-semibold mt-1">
-              {user?.userRole === 'SELLER' ? 'Người bán' : user?.userRole === 'ADMIN' ? 'Quản trị viên' : 'Khách hàng'}
+              {isSeller ? 'Người bán' : isAdmin ? 'Quản trị viên' : 'Khách hàng'}
             </span>
           </div>
         </DropdownMenuLabel>
@@ -67,8 +77,8 @@ export function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => {
             // Điều hướng thông minh dựa trên Role
-            if (user?.userRole === 'SELLER') router.push("/seller/dashboard");
-            else if (user?.userRole === 'ADMIN') router.push("/admin/dashboard");
+            if (user?.roles.includes(Role.SELLER)) router.push("/seller/dashboard");
+            else if (user?.roles.includes(Role.ADMIN)) router.push("/admin/dashboard");
             else router.push("/buyer/dashboard"); // Khách thì vào Buyer Dashboard
           }}>
             <User className="mr-2 h-4 w-4" />
@@ -76,8 +86,8 @@ export function UserNav() {
           </DropdownMenuItem>
 
           {/* Chỉ hiện Dashboard nếu là SELLER hoặc ADMIN */}
-          {(user?.userRole === 'SELLER' || user?.userRole === 'ADMIN') && (
-            <DropdownMenuItem onClick={() => router.push(user.userRole === 'SELLER' ? "/seller/dashboard" : "/admin/dashboard")}>
+          {(isSeller || isAdmin) && (
+            <DropdownMenuItem onClick={() => router.push(isSeller ? "/seller/dashboard" : "/admin/dashboard")}>
               <LayoutDashboard className="mr-2 h-4 w-4" />
               <span>Trang quản lý</span>
             </DropdownMenuItem>

@@ -5,8 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { AuthService } from "@/services/auth.service"; // Nhớ import đúng service
-import { User } from "@/types/auth.types";
+import { User } from "@/types/user.type";
 import { Link } from "lucide-react";
+import { Role } from "@/types/auth.types";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -81,9 +82,11 @@ export default function UserManagementPage() {
                   <Link>{user.email}</Link>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={user.userRole === "ADMIN" ? "destructive" : user.userRole === "SELLER" ? "default" : "secondary"}>
-                    {user.userRole}
-                  </Badge>
+                  {user.roles.map(r => (
+                    <Badge className="ml-1" key={r} variant={r === Role.ADMIN ? "destructive" : r === Role.SELLER ? "default" : "secondary"}>
+                      {r}
+                    </Badge>
+                  ))}
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">

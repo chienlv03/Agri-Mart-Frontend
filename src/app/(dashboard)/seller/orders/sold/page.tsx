@@ -19,8 +19,7 @@ export default function SellerOrdersPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const data = await OrderService.getMyOrders();
-      console.log("Dữ liệu API trả về:", data);
+      const data = await OrderService.getOrderBySeller();
       setOrders(data);
     } catch (error) {
       console.error(error);
@@ -63,7 +62,7 @@ export default function SellerOrdersPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold tracking-tight">Quản lý đơn hàng</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Quản lý đơn hàng đã bán</h1>
         <div className="text-sm text-gray-500">Tổng cộng: {orders.length} đơn hàng</div>
       </div>
 

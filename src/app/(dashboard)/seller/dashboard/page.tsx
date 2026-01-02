@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { 
   Card, CardContent, CardHeader, CardTitle, CardDescription 
@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Plus, DollarSign, Package, ShoppingCart, 
-  TrendingUp, ArrowUpRight, ArrowRight, Store 
+  TrendingUp, ArrowRight, Store 
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { useAuthStore } from "@/store/useAuthStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Role } from "@/types/auth.types";
 
 // --- MOCK DATA (Sau này thay bằng API) ---
 const REVENUE_DATA = [
@@ -45,7 +46,7 @@ export default function SellerDashboard() {
 
   // Kiểm tra hồ sơ có đầy đủ không (Dựa vào field farmName hoặc address trong user)
   // Lưu ý: User trong store có thể chưa update kịp, thực tế nên gọi API /me để check
-  const isProfileIncomplete = !user?.fullName || user.userRole !== "SELLER"; 
+  const isProfileIncomplete = !user?.roles.includes(Role.SELLER); 
   // (Trong thực tế bạn nên check thêm field: user.farmName, user.farmAddress từ API)
 
   return (

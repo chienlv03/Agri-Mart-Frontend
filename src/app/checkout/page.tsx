@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 import { 
@@ -21,59 +21,99 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { AddressListSelector } from "@/components/address/AddressListSelector"; 
 import { useCartStore } from "@/store/useCartStore"; 
 import { CheckoutService } from "@/services/checkout.service";
-import { AddressService } from "@/services/address.service"; // Import thêm AddressService
+import { AddressService } from "@/services/address.service";
 import { OrderService } from "@/services/order.service";
+import { ProductService } from "@/services/product.service"; // Cần để lấy info SP Mua ngay
 import { CheckoutResponse } from "@/types/checkout.type";
+import { CartItemResponse } from "@/types/order.types"; // Import Type
 import { formatCurrency } from "@/lib/utils"; 
+import { BackButton } from "@/components/shared/back-button";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items: cartItems, clearCart } = useCartStore(); 
+  const searchParams = useSearchParams();
+  const { items: storeItems, clearCart } = useCartStore(); 
 
-  // State
+  // --- STATE QUẢN LÝ DỮ LIỆU CHECKOUT ---
+  const [itemsToCheckout, setItemsToCheckout] = useState<CartItemResponse[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<CheckoutResponse | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "VNPAY">("COD");
   
-  const [loading, setLoading] = useState(false);
-  const [ordering, setOrdering] = useState(false);
-  const [initializing, setInitializing] = useState(true); // Loading ban đầu để tìm địa chỉ mặc định
+  const [loading, setLoading] = useState(false); // Loading khi tính phí
+  const [ordering, setOrdering] = useState(false); // Loading khi bấm đặt hàng
+  const [initializing, setInitializing] = useState(true); // Loading ban đầu
 
-  // 1. LOGIC MỚI: Tự động chọn địa chỉ mặc định khi vào trang
+  // Lấy params để check luồng Mua ngay
+  const type = searchParams.get("type"); // 'buy_now'
+  const productId = searchParams.get("productId");
+  const quantity = Number(searchParams.get("quantity")) || 1;
+
+  // 1. INIT DATA: Xử lý luồng dữ liệu (Cart vs Buy Now) + Lấy địa chỉ mặc định
   useEffect(() => {
-    const fetchDefaultAddress = async () => {
+    const initPage = async () => {
+        setInitializing(true);
         try {
+            // A. XỬ LÝ SẢN PHẨM CHECKOUT
+            if (type === "buy_now" && productId) {
+                // Case 1: Mua ngay -> Gọi API lấy thông tin SP
+                const product = await ProductService.getProductById(productId);
+                
+                // Giả lập CartItemResponse từ ProductResponse
+                const directItem: CartItemResponse = {
+                    productId: product.id,
+                    productName: product.name,
+                    productImage: product.thumbnail || product.images?.[0] || "/placeholder.jpg",
+                    price: product.price,
+                    quantity: quantity,
+                    totalPrice: product.price * quantity,
+                    sellerId: product.sellerProfileResponse?.sellerId || "", // Quan trọng để nhóm shop
+                    sellerName: product.sellerProfileResponse?.fullName || "Cửa hàng khác",
+                };
+                setItemsToCheckout([directItem]);
+
+            } else {
+                // Case 2: Mua từ giỏ hàng -> Lấy từ Store
+                // Cần đảm bảo store đã load xong (có thể check length hoặc isLoading của store)
+                if (storeItems.length > 0) {
+                    setItemsToCheckout(storeItems);
+                } else {
+                    // Nếu store rỗng (F5 trang), có thể cần gọi fetchCart lại hoặc redirect
+                    // Ở đây giả sử store đã persist hoặc đã fetch ở layout
+                    setItemsToCheckout([]); 
+                }
+            }
+
+            // B. XỬ LÝ ĐỊA CHỈ MẶC ĐỊNH
             const res = await AddressService.getMyAddresses();
             const addresses = res.data;
             if (addresses.length > 0) {
-                // Tìm địa chỉ mặc định
-                const defaultAddr = addresses.find((a: { isDefault: boolean }) => a.isDefault);
-                if (defaultAddr) {
-                    setSelectedAddressId(defaultAddr.id);
-                } else {
-                    // Nếu không có mặc định, chọn cái đầu tiên (UX fallback)
-                    setSelectedAddressId(addresses[0].id);
-                }
+                const defaultAddr = addresses.find((a: any) => a.isDefault);
+                setSelectedAddressId(defaultAddr ? defaultAddr.id : addresses[0].id);
             }
+
         } catch (error) {
-            console.error("Không tải được danh sách địa chỉ", error);
+            console.error("Lỗi khởi tạo trang checkout", error);
+            toast.error("Có lỗi khi tải thông tin đơn hàng");
         } finally {
             setInitializing(false);
         }
     };
-    fetchDefaultAddress();
-  }, []);
 
-  // 2. Tự động tính toán (Preview) khi thay đổi địa chỉ
+    initPage();
+  }, [type, productId, quantity, storeItems]); // Dependency quan trọng
+
+  // 2. Tự động tính toán (Preview) khi thay đổi địa chỉ hoặc items
   useEffect(() => {
     const fetchPreview = async () => {
-      if (!selectedAddressId || cartItems.length === 0) return;
+      if (!selectedAddressId || itemsToCheckout.length === 0) return;
 
       setLoading(true);
       try {
         const requestData = {
           addressId: selectedAddressId,
-          items: cartItems.map(item => ({
+          // Gửi danh sách item hiện tại (dù là cart hay buy_now)
+          items: itemsToCheckout.map(item => ({
             productId: item.productId,
             quantity: item.quantity
           }))
@@ -90,7 +130,7 @@ export default function CheckoutPage() {
     };
 
     fetchPreview();
-  }, [selectedAddressId, cartItems]);
+  }, [selectedAddressId, itemsToCheckout]);
 
   // 3. Xử lý Đặt hàng
   const handlePlaceOrder = async () => {
@@ -105,17 +145,25 @@ export default function CheckoutPage() {
 
     setOrdering(true);
     try {
+      // Gọi API tạo đơn
       await OrderService.createOrder({
         addressId: selectedAddressId,
         paymentMethod: paymentMethod,
-        items: cartItems.map(item => ({
+        // Quan trọng: Gửi orderType để Backend biết xử lý kho
+        orderType: type === "buy_now" ? "BUY_NOW" : "FROM_CART", 
+        items: itemsToCheckout.map(item => ({
             productId: item.productId,
             quantity: item.quantity
         })),
       });
 
       toast.success("Đặt hàng thành công!");
-      clearCart(); 
+      
+      // Chỉ xóa giỏ hàng nếu là đơn từ giỏ hàng
+      if (type !== "buy_now") {
+          clearCart(); 
+      }
+      
       router.push("/orders/success"); 
     } catch (error: any) {
       toast.error("Đặt hàng thất bại: " + (error.response?.data?.message || "Lỗi hệ thống"));
@@ -124,13 +172,13 @@ export default function CheckoutPage() {
     }
   };
 
-  // --- RENDER EMPTY CART ---
-  if (cartItems.length === 0) {
+  // --- RENDER EMPTY ---
+  if (!initializing && itemsToCheckout.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 bg-white rounded-lg shadow-sm m-4">
-        <p className="text-gray-500 text-lg">Giỏ hàng của bạn đang trống.</p>
+        <p className="text-gray-500 text-lg">Không có sản phẩm nào để thanh toán.</p>
         <Button onClick={() => router.push("/")} className="bg-green-600 hover:bg-green-700">
-            Tiếp tục mua sắm
+            Quay lại trang chủ
         </Button>
       </div>
     );
@@ -138,6 +186,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 bg-gray-50 min-h-screen">
+      <BackButton />
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-800">
         <Receipt className="w-6 h-6 text-green-600" /> Xác nhận đơn hàng
       </h1>
@@ -147,7 +196,7 @@ export default function CheckoutPage() {
       ) : (
           <div className="grid lg:grid-cols-3 gap-6 relative">
             
-            {/* --- CỘT TRÁI: DANH SÁCH SẢN PHẨM (Chiếm 2 phần) --- */}
+            {/* --- CỘT TRÁI: DANH SÁCH SẢN PHẨM --- */}
             <div className="lg:col-span-2 space-y-6">
               
               {loading ? (
@@ -196,7 +245,7 @@ export default function CheckoutPage() {
                         </div>
                       ))}
 
-                      {/* Phí ship của Shop này */}
+                      {/* Phí ship */}
                       <div className="bg-gray-50 p-4 flex justify-between items-center text-sm border-t border-gray-100">
                         <div className="flex items-center gap-2 text-gray-600">
                            <Truck className="w-4 h-4" />
@@ -211,17 +260,16 @@ export default function CheckoutPage() {
                 ))
               ) : (
                 <div className="text-center py-12 text-gray-400 bg-white rounded-lg border border-dashed">
-                   <p>Vui lòng chọn địa chỉ để hiển thị chi tiết đơn hàng.</p>
+                    <p>Vui lòng chọn địa chỉ để hiển thị chi tiết đơn hàng.</p>
                 </div>
               )}
             </div>
 
-            {/* --- CỘT PHẢI: ĐỊA CHỈ + THANH TOÁN + TỔNG (Sticky) --- */}
+            {/* --- CỘT PHẢI: INFO & PAYMENT --- */}
             <div className="lg:col-span-1">
-              {/* Sticky Wrapper: Giúp cột này trượt theo khi scroll */}
               <div className="sticky top-4 space-y-4">
                 
-                {/* 1. ĐỊA CHỈ NHẬN HÀNG (Đã chuyển sang đây) */}
+                {/* 1. ĐỊA CHỈ */}
                 <Card className="shadow-sm border-t-4 border-t-green-600">
                     <CardHeader className="pb-3 border-b border-gray-100 bg-white py-3">
                         <CardTitle className="text-sm font-bold flex items-center justify-between uppercase text-gray-700">
@@ -268,7 +316,7 @@ export default function CheckoutPage() {
                     </CardContent>
                 </Card>
 
-                {/* 2. PHƯƠNG THỨC THANH TOÁN */}
+                {/* 2. PAYMENT */}
                 <Card className="shadow-sm">
                   <CardHeader className="pb-2 pt-3 border-b border-gray-100">
                     <CardTitle className="text-sm font-bold uppercase text-gray-700">Phương thức thanh toán</CardTitle>
@@ -294,7 +342,7 @@ export default function CheckoutPage() {
                   </CardContent>
                 </Card>
 
-                {/* 3. TỔNG KẾT & NÚT MUA */}
+                {/* 3. TỔNG TIỀN */}
                 <Card className="shadow-md border-t-4 border-t-orange-500">
                   <CardContent className="space-y-3 pt-4">
                     <div className="flex justify-between text-sm text-gray-600">

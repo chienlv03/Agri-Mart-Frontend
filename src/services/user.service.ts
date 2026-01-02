@@ -2,12 +2,13 @@ import apiClient from "@/lib/axios";
 import { UpdateSellerProfileRequest } from "@/types/user.type";
 
 export const UserService = {
-   updateSellerProfile: async (
+   saveSellerProfile: async (
     data: UpdateSellerProfileRequest,
     avatarFile?: File | null,       // Ảnh đại diện
     idCardFrontFile?: File | null,  // Ảnh mặt trước CCCD (Mới)
     idCardBackFile?: File | null,   // Ảnh mặt sau CCCD (Mới)
-    farmImages?: File[]             // Ảnh vườn
+    farmImages?: File[],             // Ảnh vườn
+    businessLicenseUrls?: File[]    // Ảnh giấy phép kinh doanh
   ) => {
     const formData = new FormData();
 
@@ -43,6 +44,15 @@ export const UserService = {
       });
     }
 
+    // 6. Ảnh giấy phép kinh doanh
+    // Backend @RequestPart("businessLicenseUrls") 
+    // Lưu ý: Tên key phải là "businessLicenseUrls" để khớp với List<MultipartFile> businessLicenseUrls bên Java
+    if (businessLicenseUrls && businessLicenseUrls.length > 0) {
+      businessLicenseUrls.forEach((file) => {
+        formData.append("businessLicenseUrls", file);
+      });
+    }
+
     // Gọi API
     // Lưu ý: Nếu backend trả về void thì response sẽ không có data body
     return await apiClient.put("/sellers/profile", formData, {
@@ -52,8 +62,14 @@ export const UserService = {
     });
   },
 
-  getSellerProfile: async () => {
+  getMySellerProfile: async () => {
     // Gọi GET /sellers/profile
     return await apiClient.get("/sellers/profile");
+  },
+
+  
+  async getSellerPublicProfile(sellerId: string) {
+    const res = await apiClient.get(`/sellers/${sellerId}`);
+    return res.data;
   },
 }

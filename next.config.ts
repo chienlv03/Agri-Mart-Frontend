@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
         port: '9000',
         pathname: '/**'
       },
+      {
+        protocol: "https",
+        hostname: "as1.ftcdn.net",       // Cho background pattern lá
+        port: "",
+        pathname: "/**",                 // Cho phép mọi path
+      },
+      {
+        protocol: "https",
+        hostname: "static.vecteezy.com", // Cho illustration nông dân và logo
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };

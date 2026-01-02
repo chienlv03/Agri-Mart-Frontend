@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { UserNav } from "@/components/shared/user-nav";
 import { CartSheet } from "@/components/cart/cart-sheet"; // <--- 1. IMPORT CART SHEET
 import { useEffect, useState } from "react";
+import { Role } from "@/types/auth.types";
 
 export function Header() {
   const { isAuthenticated, user } = useAuthStore();
@@ -51,13 +52,13 @@ export function Header() {
 
         {/* --- LOGIC HIỂN THỊ GIỎ HÀNG --- */}
         {/* Điều kiện: Đã đăng nhập VÀ Role không phải ADMIN */}
-        {isAuthenticated && user?.userRole !== "ADMIN" && (
+        {isAuthenticated && !user?.roles?.includes(Role.ADMIN) && (
            <CartSheet />
         )}
 
         {/* Phân cách nhỏ (Chỉ hiện khi đã đăng nhập để ngăn cách Cart và User) */}
         {isAuthenticated && (
-           <div className="h-6 w-[1px] bg-gray-200 mx-1 hidden sm:block"></div>
+           <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
         )}
 
         {isAuthenticated ? (

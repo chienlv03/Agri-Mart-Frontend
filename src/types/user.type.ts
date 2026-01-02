@@ -1,4 +1,4 @@
-import { UserRole } from "@/types/auth.types";
+import { Role } from "@/types/auth.types";
 
 export interface Certification {
   type: string;      // Ví dụ: "VietGAP", "OCOP"
@@ -20,6 +20,8 @@ export interface UpdateSellerProfileRequest {
   farmName?: string;
   farmDescription?: string;
   farmAddress?: string;
+  farmPhotos?: string[];
+  businessLicenseUrls?: string[];
 
   // --- Tọa độ (Quan trọng để tính ship) ---
   latitude?: number;
@@ -34,7 +36,7 @@ export interface User {
   fullName: string;
   email: string;
   phone: string;
-  userRole: UserRole;
+  roles: Role[];
   avatarUrl?: string;
   status: string;
   createdAt: string;
@@ -55,6 +57,7 @@ export interface SellerInfo {
   farmDescription?: string;
   farmAddress?: string;
   farmPhotos?: string[];
+  businessLicenseUrls?: string[];
 
   latitude?: number;
   longitude?: number;

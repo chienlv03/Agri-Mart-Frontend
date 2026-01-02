@@ -14,7 +14,7 @@ export function proxy(request: NextRequest) {
   // --- CASE 1: Chưa đăng nhập hẳn (Mất cả 2 token) ---
   // Chỉ redirect khi mất cả accessToken LẪN refreshToken
   if (!accessToken && !refreshToken) {
-    const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith('/products'));
+    const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith('/products') || pathname.startsWith('/shops'));
 
     if (!isPublic) {
       const url = new URL('/login', request.url);
@@ -43,7 +43,7 @@ export function proxy(request: NextRequest) {
   }
 
   // 2.2: Check quyền SELLER
-  if (pathname.startsWith('/seller') && userRole !== 'SELLER') {
+  if ((pathname.startsWith('/seller') || pathname.startsWith('/orders/bought')) && !userRole.includes("SELLER")) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

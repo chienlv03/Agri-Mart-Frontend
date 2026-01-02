@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ProductService } from "@/services/product.service";
-import { Product } from "@/types/product.type";
+import { ProductResponse } from "@/types/product.type";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Eye } from "lucide-react";
@@ -13,7 +13,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls"; // Com
 import { toast } from "sonner";
 
 export default function MyProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -61,9 +61,10 @@ export default function MyProductsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">Ảnh</TableHead>
+              <TableHead className="w-20">Ảnh</TableHead>
               <TableHead>Tên sản phẩm</TableHead>
               <TableHead>Giá bán</TableHead>
+              <TableHead>Số lượng</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
@@ -85,6 +86,7 @@ export default function MyProductsPage() {
                   <div className="text-xs text-muted-foreground">SKU: {p.id.substring(0, 8)}</div>
                 </TableCell>
                 <TableCell>{p.price.toLocaleString()}đ/{p.unit}</TableCell>
+                <TableCell>{p.availableQuantity}</TableCell>
                 <TableCell>
                   <Badge
                     variant={p.status === "ACTIVE" ? 'default' : p.status === 'PENDING' ? 'secondary' : 'destructive'}

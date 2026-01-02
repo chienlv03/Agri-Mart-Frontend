@@ -15,7 +15,7 @@ export default function OrderSuccessPage() {
       </p>
 
       <div className="flex gap-4">
-        <Link href="/seller/orders">
+        <Link href="/seller/orders/bought">
           <Button variant="outline">Xem đơn hàng của tôi</Button>
         </Link>
         <Link href="/">
