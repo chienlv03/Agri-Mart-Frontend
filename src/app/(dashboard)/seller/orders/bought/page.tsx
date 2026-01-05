@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { OrderService } from "@/services/order.service";
@@ -9,16 +9,17 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Loader2, PackageX, ShoppingBag } from "lucide-react";
-import { toast } from "sonner";
 import { OrderResponse, OrderStatus } from "@/types/order.types";
+// Import Component Dialog Hủy đơn
+import { CancelOrderDialog } from "@/components/shared/cancel-order-dialog";
 
 export default function MyOrdersPage() {
     const [orders, setOrders] = useState<OrderResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("ALL");
 
-    // 1. Fetch dữ liệu
-    const fetchOrders = async () => {
+    // 1. Fetch dữ liệu (Dùng useCallback để tránh tạo lại hàm không cần thiết)
+    const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
             const data = await OrderService.getOrderByBuyer();
@@ -29,26 +30,13 @@ export default function MyOrdersPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchOrders();
-    }, []);
+    }, [fetchOrders]);
 
-    // 2. Xử lý Hủy đơn
-    const handleCancelOrder = async (orderId: string) => {
-        const confirm = window.confirm("Bạn có chắc muốn hủy đơn hàng này?");
-        if (!confirm) return;
-
-        try {
-            await OrderService.cancelOrder(orderId);
-            toast.success("Đã hủy đơn hàng");
-            fetchOrders(); // Reload lại
-        } catch (error: any) {
-            console.error(error.response?.data?.message);
-            toast.error(error?.response?.data?.message || "Không thể hủy đơn hàng (Có thể đơn đã được duyệt)");
-        }
-    };
+    // --- ĐÃ XÓA HÀM handleCancelOrder CŨ ---
 
     // 3. Lọc đơn hàng theo Tab
     const filteredOrders = orders.filter((order) => {
@@ -142,7 +130,6 @@ export default function MyOrdersPage() {
                                                 <h4 className="font-medium text-sm line-clamp-2 mb-1">{item.productName}</h4>
                                                 <div className="text-xs text-gray-500 flex justify-between">
                                                     <span>x{item.quantity}</span>
-                                                    {/* Nếu có phân loại hàng thì hiện ở đây */}
                                                 </div>
                                             </div>
                                             <div className="text-sm font-medium">
@@ -160,19 +147,24 @@ export default function MyOrdersPage() {
                                     </div>
 
                                     <div className="flex gap-2">
-                                        {/* Nút Hủy: Chỉ hiện khi PENDING */}
+                                        {/* THAY THẾ NÚT HỦY CŨ BẰNG COMPONENT DIALOG */}
                                         {order.status === OrderStatus.PENDING && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                                onClick={() => handleCancelOrder(order.id)}
-                                            >
-                                                Hủy đơn hàng
-                                            </Button>
+                                            <CancelOrderDialog
+                                                orderId={order.id}
+                                                onSuccess={fetchOrders} // Gọi lại API để reload list sau khi hủy
+                                                trigger={
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                                    >
+                                                        Hủy đơn hàng
+                                                    </Button>
+                                                }
+                                            />
                                         )}
 
-                                        {/* Nút Mua lại: Hiện khi đã hoàn thành hoặc đã hủy */}
+                                        {/* Nút Mua lại */}
                                         {(order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED) && (
                                             <Link href={`/products/${order.items[0]?.productId}`}>
                                                 <Button size="sm" variant="outline">Mua lại</Button>

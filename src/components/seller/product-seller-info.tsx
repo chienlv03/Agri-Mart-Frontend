@@ -78,7 +78,7 @@ export function ProductSellerInfo({ product, canBuy, isOutOfStock }: ProductSell
                         <MessageCircle className="h-4 w-4 mr-2" /> Chat ngay
                     </Button>
                     <Link href={`/shops/${product.sellerProfileResponse?.sellerId}`}>
-                        <Button variant="outline" size="sm" className="w-full text-gray-700">
+                        <Button variant="outline" size="sm" className="w-full text-gray-700 cursor-pointer">
                             <Store className="h-4 w-4 mr-2" /> Xem hồ sơ
                         </Button>
                     </Link>

@@ -1,4 +1,4 @@
-import apiClient from "@/lib/axios"; // Import axios instance bạn vừa cấu hình
+import apiClient from "@/lib/axios";
 import { CreateOrderPayload, OrderResponse, OrderStatus } from "@/types/order.types";
 
 export const OrderService = {
@@ -14,7 +14,7 @@ export const OrderService = {
   },
 
   // Cập nhật trạng thái
-  updateStatus: async (orderId: string, status: OrderStatus) => {
+  updateOrderStatus: async (orderId: string, status: OrderStatus) => {
     await apiClient.patch(`/orders/${orderId}/status?status=${status}`);
   },
 
@@ -24,8 +24,8 @@ export const OrderService = {
   },
 
   // 2. Người mua tự hủy đơn (Chỉ áp dụng cho đơn PENDING)
-  cancelOrder: async (orderId: string) => {
-    await apiClient.put(`/orders/${orderId}/cancel`);
+  cancelOrder: async (orderId: string, cancelReason: string) => {
+    await apiClient.put(`/orders/${orderId}/cancel`, { cancelReason });
   },
 
   getOrderById: async (orderId: string) => {

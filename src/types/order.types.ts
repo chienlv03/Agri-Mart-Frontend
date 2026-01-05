@@ -7,6 +7,7 @@ export interface CartItemResponse {
   sellerId: string;
   sellerName: string;
   totalPrice: number;
+  isPreOrder: boolean;
 }
 
 export interface CreateOrderPayload {
@@ -46,6 +47,9 @@ export interface OrderResponse {
   status: OrderStatus
   paymentMethod: string
   isPreOrder: boolean
+  expectedDeliveryDate?: string
+  cancelReason?: string
+  paymentStatus: string
   items: OrderItem[]
   createdAt: string
 }

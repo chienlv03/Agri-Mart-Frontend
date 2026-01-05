@@ -1,3 +1,5 @@
+import { is } from "date-fns/locale";
+
 // Input gửi lên để tính toán
 export interface CheckoutPreviewRequest {
   addressId: string;
@@ -17,6 +19,7 @@ export interface CheckoutItemResponse {
   quantity: number;
   price: number;      // Giá đơn vị
   totalPrice: number; // Giá x số lượng
+  isPreOrder: boolean;
 }
 
 // Nhóm đơn hàng theo Shop

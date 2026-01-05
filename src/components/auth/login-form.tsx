@@ -98,10 +98,7 @@ export function LoginForm() {
         otpCode: values.otpCode,
       });
 
-      // Lấy thông tin user để lưu vào Store (Tùy chọn: Gọi thêm API /me)
-      // Ở đây tạm thời lấy role từ token hoặc gọi API /users/me
-      const userRes = await AuthService.getMe(); // Cần đảm bảo axios interceptor đã gắn token vừa lưu
-      console.log("User info:", userRes.data);
+      const userRes = await AuthService.getMe(); 
       
       // Cập nhật Global State
       login(userRes.data);
