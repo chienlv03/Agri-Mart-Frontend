@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner"; // <--- Quan trọng: Import Toaster
+import { Toaster } from "@/components/ui/sonner";
 import { SellerFloatingButton } from "@/components/shared/seller-floating-button";
+// 1. Import Provider
+import { NotificationProvider } from "@/components/providers/notification-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,7 +16,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Cập nhật Metadata cho chuẩn đồ án
 export const metadata: Metadata = {
   title: "Nông Sản Sạch - Từ Vườn Đến Bàn Ăn",
   description: "Sàn thương mại điện tử kết nối trực tiếp nông dân và người tiêu dùng Việt Nam.",
@@ -30,9 +31,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        <main className="grow">{children}</main>
-        <SellerFloatingButton />
-        <Toaster position="top-center" richColors />
+        {/* 2. Bọc NotificationProvider ở đây */}
+        <NotificationProvider>
+            <main className="grow">{children}</main>
+            
+            <SellerFloatingButton />
+            
+            {/* Toaster để hiển thị popup thông báo real-time */}
+            <Toaster position="top-center" richColors />
+        </NotificationProvider>
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import { UserNav } from "@/components/shared/user-nav";
 import { CartSheet } from "@/components/cart/cart-sheet"; // <--- 1. IMPORT CART SHEET
 import { useEffect, useState } from "react";
 import { Role } from "@/types/auth.types";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 export function Header() {
   const { isAuthenticated, user } = useAuthStore();
@@ -49,6 +50,10 @@ export function Header() {
 
       {/* 3. Khu vực Hành động (Cart + Auth) */}
       <div className="flex items-center gap-3">
+
+        {isAuthenticated && !user?.roles?.includes(Role.ADMIN) && (
+           <NotificationBell />
+        )}
 
         {/* --- LOGIC HIỂN THỊ GIỎ HÀNG --- */}
         {/* Điều kiện: Đã đăng nhập VÀ Role không phải ADMIN */}

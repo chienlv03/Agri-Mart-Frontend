@@ -5,21 +5,22 @@ import { ProductService } from "@/services/product.service";
 import { ProductResponse } from "@/types/product.type";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Check, X, Eye, Loader2 } from "lucide-react";
+import { Check, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ProductDetailDialog } from "@/components/admin/product-detail-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { format } from "date-fns";
+import { RejectProductDialog } from "@/components/admin/reject-product-dialog";
 
 export default function ProductApprovalPage() {
     const [products, setProducts] = useState<ProductResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [page, setPage] = useState(0); // Trang hiện tại
-    const [totalPages, setTotalPages] = useState(0); // Tổng số trang
-    const pageSize = 10; // Số lượng item 1 trang
+    const [page, setPage] = useState(0); 
+    const [totalPages, setTotalPages] = useState(0); 
+    const pageSize = 10; 
 
     const fetchPending = async () => {
         setLoading(true);
@@ -44,23 +45,34 @@ export default function ProductApprovalPage() {
         fetchPending();
     }, [page]);
 
-    const handleStatusChange = async (id: string, status: "ACTIVE" | "REJECTED") => {
-        if (!confirm(status === "ACTIVE" ? "Duyệt sản phẩm này lên sàn?" : "Từ chối sản phẩm này?")) return;
+    // 1. Hàm xử lý Duyệt (ACTIVE)
+    const handleApprove = async (id: string) => {
+        if (!confirm("Duyệt sản phẩm này lên sàn?")) return;
 
         setProcessingId(id);
         try {
-            await ProductService.updateProductStatus(id, status);
-
-            toast.success(status === "ACTIVE" ? "Đã duyệt sản phẩm" : "Đã từ chối sản phẩm");
-
-            // Xóa khỏi danh sách UI ngay lập tức (Optimistic update)
+            // Reason có thể null khi duyệt
+            await ProductService.updateProductStatus(id, "ACTIVE", undefined);
+            toast.success("Đã duyệt sản phẩm");
             setProducts((prev) => prev.filter((p) => p.id !== id));
-
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error(error instanceof Error ? error.message : "Có lỗi xảy ra, vui lòng thử lại");
+            toast.error(error.message || "Có lỗi xảy ra");
         } finally {
             setProcessingId(null);
+        }
+    };
+
+    // 2. Hàm xử lý Từ chối (REJECTED) - Truyền vào Dialog
+    const handleReject = async (id: string, reason: string) => {
+        // Không cần setProcessingId ở đây vì Dialog tự quản lý loading cục bộ của nó
+        // Nhưng nếu muốn chặn thao tác khác trên bảng thì có thể dùng
+        try {
+            await ProductService.updateProductStatus(id, "REJECTED", reason);
+            toast.success("Đã từ chối sản phẩm");
+            setProducts((prev) => prev.filter((p) => p.id !== id));
+        } catch (error: any) {
+             throw new Error(error.response?.data?.message || "Lỗi khi từ chối sản phẩm");
         }
     };
 
@@ -80,7 +92,7 @@ export default function ProductApprovalPage() {
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-gray-50">
-                            <TableHead className="w-[80px]">Ảnh</TableHead>
+                            <TableHead className="w-20">Ảnh</TableHead>
                             <TableHead className="w-[250px]">Tên sản phẩm</TableHead>
                             <TableHead>Người bán</TableHead>
                             <TableHead>Giá bán</TableHead>
@@ -120,43 +132,40 @@ export default function ProductApprovalPage() {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
+                                            {/* Xử lý an toàn nếu sellerProfileResponse null */}
                                             <div className="relative h-6 w-6 rounded-full overflow-hidden border">
                                                 <Image src={p.sellerProfileResponse?.avatarUrl || "/placeholder.jpg"} alt="" fill className="object-cover" unoptimized />
                                             </div>
-                                            <span className="text-sm font-medium">{p.sellerProfileResponse?.fullName}</span>
+                                            <span className="text-sm font-medium">{p.sellerProfileResponse?.fullName || "Unknown"}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="font-bold text-red-600">
                                         {p.price?.toLocaleString()}đ/{p.unit}
                                     </TableCell>
                                     <TableCell className="text-sm text-gray-500">
-                                        {/* Cần xử lý hiển thị ngày tùy format backend */}
                                         {format(new Date(p.createdAt), "dd/MM/yyyy")}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            {/* Nút Xem Chi Tiết (Mở Dialog) */}
+                                            {/* Nút Xem Chi Tiết */}
                                             <ProductDetailDialog product={p}>
                                                 <Button variant="ghost" size="icon" title="Xem chi tiết">
                                                     <Eye className="h-4 w-4 text-blue-500" />
                                                 </Button>
                                             </ProductDetailDialog>
 
-                                            {/* Nút Từ chối */}
-                                            <Button
-                                                variant="outline" size="sm"
-                                                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8 px-2"
-                                                onClick={() => handleStatusChange(p.id, "REJECTED")}
-                                                disabled={processingId === p.id}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
+                                            {/* COMPONENT DIALOG TỪ CHỐI MỚI */}
+                                            <RejectProductDialog 
+                                                productId={p.id}
+                                                productName={p.name}
+                                                onConfirm={handleReject}
+                                            />
 
-                                            {/* Nút Duyệt */}
+                                            {/* Nút Duyệt (Giữ nguyên) */}
                                             <Button
                                                 size="sm"
                                                 className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 gap-1"
-                                                onClick={() => handleStatusChange(p.id, "ACTIVE")}
+                                                onClick={() => handleApprove(p.id)}
                                                 disabled={processingId === p.id}
                                             >
                                                 {processingId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
@@ -174,7 +183,7 @@ export default function ProductApprovalPage() {
                 <PaginationControls
                     currentPage={page}
                     totalPages={totalPages}
-                    onPageChange={(newPage) => setPage(newPage)} // Cập nhật state page -> Kích hoạt useEffect fetch lại
+                    onPageChange={(newPage) => setPage(newPage)}
                 />
             )}
         </div>

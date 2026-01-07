@@ -36,8 +36,8 @@ export const ProductService = {
       params: {
         page: params?.page || 0,
         size: params?.size || 10,
-        createdAt: params?.sortBy || "createdAt", // Backend param tên là 'createdAt' (sortBy)
-        desc: params?.order || "desc",            // Backend param tên là 'desc' (order)
+        createdAt: params?.sortBy || "createdAt",
+        desc: params?.order || "desc",
       },
     });
     return res.data;
@@ -58,11 +58,10 @@ export const ProductService = {
   },
 
   // 2. API Duyệt/Từ chối sản phẩm (ROLE_ADMIN)
-  // Endpoint: PUT /api/v1/products/{id}/status?status=...
-  updateProductStatus: async (id: string, status: ProductStatus) => {
-    // Backend controller trả về ResponseEntity<Void> nên không có data trả về
-    return await apiClient.put<void>(`/products/${id}/status`, null, {
-      params: { status } // Gửi status qua Query Param
+  updateProductStatus: async (id: string, status: "ACTIVE" | "REJECTED", reason?: string) => {
+    return await apiClient.put<void>(`/products/${id}/status`, {
+      status: status,
+      reason: reason
     });
   },
 
