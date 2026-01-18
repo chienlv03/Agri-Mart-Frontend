@@ -19,13 +19,15 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  ShoppingBag
+  ShoppingBag,
+  Store
 } from "lucide-react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
 // Import Component Dialog Hủy đơn (Hãy đảm bảo đường dẫn đúng với nơi bạn tạo file)
 import { CancelOrderDialog } from "@/components/shared/cancel-order-dialog";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // --- Helper Functions (Giữ nguyên) ---
 const getStatusLabel = (status: OrderStatus) => {
@@ -68,6 +70,10 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const { user } = useAuthStore(); 
+  const currentUserId = user?.id;
 
   // 1. Tách hàm fetch ra để tái sử dụng (khi hủy xong gọi lại để refresh data)
   const fetchOrderDetail = useCallback(async () => {
@@ -84,11 +90,29 @@ export default function OrderDetailPage() {
     }
   }, [orderId]);
 
+  const handleConfirmOrder = async () => {
+    if (!order) return;
+    try {
+      setIsConfirming(true);
+      await OrderService.updateOrderStatus(order.id, OrderStatus.CONFIRMED);
+      toast.success("Đã xác nhận đơn hàng thành công!");
+      // Refresh lại data
+      await fetchOrderDetail();
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi xác nhận đơn hàng");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   // 2. Gọi fetch lần đầu
   useEffect(() => {
     setLoading(true);
     fetchOrderDetail();
   }, [fetchOrderDetail]);
+
+  const isSeller = currentUserId === order?.sellerId;
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-green-600" /></div>;
@@ -264,28 +288,64 @@ export default function OrderDetailPage() {
             </CardContent>
 
             {/* 6. Action Buttons */}
-            <div className="p-4 pt-0">
-                {order.status === OrderStatus.PENDING && (
-                    <CancelOrderDialog
-                        orderId={order.id}
-                        onSuccess={fetchOrderDetail} // Gọi lại API để cập nhật giao diện
-                        trigger={
-                            <Button variant="destructive" className="w-full">
-                                Hủy đơn hàng
-                            </Button>
-                        }
-                    />
-                )}
-                
-                {(order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED) && (
-                    <div className="bg-gray-50 border-t rounded-b-lg -mx-4 -mb-4 p-4">
-                        <Link href={`/products/${order.items[0]?.productId}`}>
-                            <Button className="w-full bg-green-600 hover:bg-green-700">
-                                Mua lại sản phẩm
-                            </Button>
-                        </Link>
-                    </div>
-                )}
+            <div className="p-4 pt-0 space-y-3">
+              
+              {/* LOGIC CHO NGƯỜI BÁN (SELLER) */}
+              {isSeller && order.status === OrderStatus.PENDING && (
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Nút Nhận Đơn */}
+                  <Button 
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handleConfirmOrder}
+                    disabled={isConfirming}
+                  >
+                    {isConfirming ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <Store className="mr-2 h-4 w-4" /> Nhận đơn
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Nút Hủy (Người bán cũng có thể hủy/từ chối) */}
+                  <CancelOrderDialog
+                    orderId={order.id}
+                    onSuccess={fetchOrderDetail}
+                    trigger={
+                      <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
+                        Từ chối
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
+
+              {/* LOGIC CHO NGƯỜI MUA (BUYER) - Hoặc nếu không phải Seller */}
+              {!isSeller && order.status === OrderStatus.PENDING && (
+                <CancelOrderDialog
+                  orderId={order.id}
+                  onSuccess={fetchOrderDetail}
+                  trigger={
+                    <Button variant="destructive" className="w-full">
+                      Hủy đơn hàng
+                    </Button>
+                  }
+                />
+              )}
+              
+              {/* Nút Mua Lại (Chỉ hiện cho Buyer hoặc chung) */}
+              {(order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED) && (
+                <div className="bg-gray-50 border-t rounded-b-lg -mx-4 -mb-4 p-4">
+                  <Link href={`/products/${order.items[0]?.productId}`}>
+                    <Button className="w-full bg-green-600 hover:bg-green-700">
+                      Mua lại sản phẩm
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </Card>
 

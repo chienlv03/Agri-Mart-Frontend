@@ -1,5 +1,5 @@
 import apiClient from "@/lib/axios";
-import { CreateOrderPayload, OrderResponse, OrderStatus } from "@/types/order.types";
+import { CreateOrderPayload, OrderResponse, OrderStatus, PageResponse } from "@/types/order.types";
 
 export const OrderService = {
   // Hàm gọi API tạo đơn
@@ -8,8 +8,18 @@ export const OrderService = {
     return response.data;
   },
 
-  getOrderBySeller: async () => {
-    const response = await apiClient.get<OrderResponse[]>("/orders/seller");
+  getOrderBySeller: async (page = 0, size = 10): Promise<PageResponse<OrderResponse>> => {
+    // Truyền params page và size vào URL
+    const response = await apiClient.get<PageResponse<OrderResponse>>("/orders/seller", {
+      params: { page, size }, 
+    });
+    return response.data;
+  },
+
+  getOrderByBuyer: async (page = 0, size = 10): Promise<PageResponse<OrderResponse>> => {
+    const response = await apiClient.get<PageResponse<OrderResponse>>("/orders/buyer", {
+      params: { page, size },
+    });
     return response.data;
   },
 
@@ -18,10 +28,6 @@ export const OrderService = {
     await apiClient.patch(`/orders/${orderId}/status?status=${status}`);
   },
 
-  getOrderByBuyer: async () => {
-    const response = await apiClient.get<OrderResponse[]>("/orders/buyer");
-    return response.data;
-  },
 
   // 2. Người mua tự hủy đơn (Chỉ áp dụng cho đơn PENDING)
   cancelOrder: async (orderId: string, cancelReason: string) => {

@@ -32,7 +32,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [isConnected, setIsConnected] = useState(false);
   const stompClientRef = useRef<InstanceType<typeof Client> | null>(null);
 
-  // 1. Fetch lịch sử thông báo (Đã sửa lỗi Cascading Renders)
+  // 1. Fetch lịch sử thông báo
   useEffect(() => {
     let isMounted = true;
 
@@ -73,9 +73,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const client = new Client({
       webSocketFactory: () => new SockJS(socketUrl),
-      
-      // XÓA BỎ connectHeaders chứa accessToken 
-      // Vì chúng ta dùng Cookie (HttpOnly) nên trình duyệt tự gửi
       
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,

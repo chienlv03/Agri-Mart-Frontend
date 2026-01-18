@@ -5,49 +5,67 @@ import { OrderService } from "@/services/order.service";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Thêm CardFooter
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Check, Truck, X, Loader2 } from "lucide-react";
+import { Check, Truck, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react"; // Thêm Icon điều hướng
 import { OrderResponse, OrderStatus } from "@/types/order.types";
-// 1. IMPORT COMPONENT DIALOG HỦY
 import { CancelOrderDialog } from "@/components/shared/cancel-order-dialog";
 
 export default function SellerOrdersPage() {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load data (Dùng useCallback để tránh warning dependency)
+  // 1. STATE CHO PHÂN TRANG
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10; // Số lượng đơn mỗi trang
+
+  // 2. Cập nhật hàm fetch để nhận tham số page
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await OrderService.getOrderBySeller(); // Đảm bảo service có hàm này
-      setOrders(data);
+      // Gọi service với tham số phân trang
+      // Lưu ý: Đảm bảo OrderService.getOrderBySeller đã được sửa để nhận (page, size)
+      const data = await OrderService.getOrderBySeller(currentPage, pageSize);
+      
+      // Xử lý dữ liệu trả về từ PageResponse
+      setOrders(data.content || []); 
+      setTotalPages(data.totalPages);
+      setTotalElements(data.totalElements);
+
     } catch (error) {
       console.error(error);
       toast.error("Không thể tải danh sách đơn hàng");
+      setOrders([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage]); // Re-fetch khi currentPage thay đổi
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
 
-  // Hàm xử lý đổi trạng thái (Chỉ dùng cho Duyệt và Giao hàng)
   const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
       await OrderService.updateOrderStatus(orderId, newStatus);
       toast.success("Cập nhật trạng thái thành công");
-      fetchOrders(); // Reload lại bảng
+      fetchOrders(); 
     } catch (error: any) {
       console.error(error);
       toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     }
   };
 
-  // Helper chọn màu Badge
+  // Hàm chuyển trang
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING: return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Chờ xác nhận</Badge>;
@@ -59,14 +77,15 @@ export default function SellerOrdersPage() {
     }
   };
 
-  if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin w-8 h-8 text-green-600"/></div>;
+  if (loading && orders.length === 0) return <div className="flex justify-center p-20"><Loader2 className="animate-spin w-8 h-8 text-green-600"/></div>;
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Quản lý đơn hàng</h1>
         <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border shadow-sm">
-            Tổng cộng: <b>{orders.length}</b> đơn hàng
+            {/* Hiển thị tổng số bản ghi thực tế từ Server */}
+            Tổng cộng: <b>{totalElements}</b> đơn hàng
         </div>
       </div>
 
@@ -91,7 +110,7 @@ export default function SellerOrdersPage() {
               {orders.length === 0 ? (
                   <TableRow>
                       <TableCell colSpan={7} className="text-center py-10 text-gray-500">
-                          Chưa có đơn hàng nào
+                          {loading ? <Loader2 className="animate-spin w-6 h-6 mx-auto"/> : "Chưa có đơn hàng nào"}
                       </TableCell>
                   </TableRow>
               ) : (
@@ -118,67 +137,44 @@ export default function SellerOrdersPage() {
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-right pr-6">
                         
-                        {/* 1. TRẠNG THÁI PENDING: DUYỆT HOẶC HỦY */}
+                        {/* 1. TRẠNG THÁI PENDING */}
                         {order.status === OrderStatus.PENDING && (
                         <div className="flex justify-end gap-2">
-                            {/* --- THAY THẾ NÚT HỦY CŨ BẰNG DIALOG --- */}
                             <CancelOrderDialog 
                                 orderId={order.id}
-                                onSuccess={fetchOrders} // Reload lại bảng sau khi hủy
+                                onSuccess={fetchOrders}
                                 trigger={
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8"
-                                    >
+                                    <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8">
                                         <X className="w-3.5 h-3.5 mr-1" /> Hủy
                                     </Button>
                                 }
                             />
-
-                            <Button 
-                                size="sm" 
-                                className="bg-green-600 hover:bg-green-700 h-8"
-                                onClick={() => handleUpdateStatus(order.id, OrderStatus.CONFIRMED)}
-                            >
-                            <Check className="w-3.5 h-3.5 mr-1" /> Duyệt
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleUpdateStatus(order.id, OrderStatus.CONFIRMED)}>
+                                <Check className="w-3.5 h-3.5 mr-1" /> Duyệt
                             </Button>
                         </div>
                         )}
 
-                        {/* 2. TRẠNG THÁI CONFIRMED: GIAO HÀNG */}
+                        {/* 2. TRẠNG THÁI CONFIRMED */}
                         {order.status === OrderStatus.CONFIRMED && (
                         <div className="flex justify-end gap-2">
-                             {/* Nếu cần hủy khi đã duyệt (vd: kho báo lỗi), vẫn có thể hiện nút Hủy ở đây */}
                              <CancelOrderDialog 
                                 orderId={order.id}
                                 onSuccess={fetchOrders}
                                 trigger={
-                                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 px-2">
-                                        Hủy
-                                    </Button>
+                                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 px-2">Hủy</Button>
                                 }
                             />
-                            
-                            <Button 
-                                size="sm" 
-                                variant="secondary"
-                                className="bg-purple-100 text-purple-700 hover:bg-purple-200 h-8"
-                                onClick={() => handleUpdateStatus(order.id, OrderStatus.SHIPPING)}
-                            >
+                            <Button size="sm" variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-200 h-8" onClick={() => handleUpdateStatus(order.id, OrderStatus.SHIPPING)}>
                                 <Truck className="w-3.5 h-3.5 mr-1" /> Giao hàng
                             </Button>
                         </div>
                         )}
 
                         {/* 3. CÁC TRẠNG THÁI KHÁC */}
-                        {order.status === OrderStatus.SHIPPING && (
-                            <span className="text-xs text-purple-600 font-medium italic">Đang vận chuyển...</span>
-                        )}
-                         {order.status === OrderStatus.COMPLETED && (
-                            <span className="text-xs text-green-600 font-medium">Hoàn tất</span>
-                        )}
-
+                        {order.status === OrderStatus.SHIPPING && <span className="text-xs text-purple-600 font-medium italic">Đang vận chuyển...</span>}
+                        {order.status === OrderStatus.COMPLETED && <span className="text-xs text-green-600 font-medium">Hoàn tất</span>}
+                        {order.status === OrderStatus.CANCELLED && <span className="text-xs text-gray-400">Đã hủy</span>}
                     </TableCell>
                     </TableRow>
                 ))
@@ -186,6 +182,36 @@ export default function SellerOrdersPage() {
             </TableBody>
           </Table>
         </CardContent>
+
+        {/* 3. THANH PHÂN TRANG */}
+        {totalPages > 1 && (
+            <CardFooter className="flex items-center justify-between border-t py-4">
+                <div className="text-xs text-gray-500">
+                    Hiển thị <strong>{orders.length}</strong> trên tổng <strong>{totalElements}</strong> đơn hàng
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 0 || loading}
+                    >
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Trước
+                    </Button>
+                    <span className="text-sm font-medium px-2">
+                        Trang {currentPage + 1} / {totalPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages - 1 || loading}
+                    >
+                        Tiếp <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                </div>
+            </CardFooter>
+        )}
       </Card>
     </div>
   );

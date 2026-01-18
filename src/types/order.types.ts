@@ -62,3 +62,16 @@ export enum OrderStatus {
   CANCELLED = "CANCELLED",
   COMPLETED = "COMPLETED"
 }
+
+// types/common.types.ts hoặc types/order.types.ts
+
+export interface PageResponse<T> {
+  content: T[];          // Danh sách dữ liệu chính (Orders)
+  totalPages: number;    // Tổng số trang
+  totalElements: number; // Tổng số bản ghi
+  size: number;          // Kích thước trang
+  number: number;        // Trang hiện tại (bắt đầu từ 0)
+  last: boolean;         // Có phải trang cuối không?
+  first: boolean;        // Có phải trang đầu không?
+  empty: boolean;
+}

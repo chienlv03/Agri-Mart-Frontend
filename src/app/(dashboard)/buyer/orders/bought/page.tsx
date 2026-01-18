@@ -10,7 +10,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Loader2, PackageX, ShoppingBag } from "lucide-react";
 import { OrderResponse, OrderStatus } from "@/types/order.types";
-// Import Component Dialog Hủy đơn
 import { CancelOrderDialog } from "@/components/shared/cancel-order-dialog";
 
 export default function MyOrdersPage() {
@@ -26,7 +25,6 @@ export default function MyOrdersPage() {
             setOrders(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error(error);
-            // toast.error("Lỗi tải đơn hàng");
         } finally {
             setLoading(false);
         }
@@ -35,8 +33,6 @@ export default function MyOrdersPage() {
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
-
-    // --- ĐÃ XÓA HÀM handleCancelOrder CŨ ---
 
     // 3. Lọc đơn hàng theo Tab
     const filteredOrders = orders.filter((order) => {
