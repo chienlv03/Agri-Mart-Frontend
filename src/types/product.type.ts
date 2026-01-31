@@ -140,3 +140,19 @@ export interface ProductSearchParams {
   sortBy?: string;
   order?: "asc" | "desc";
 }
+
+export interface ProductSearchRequest {
+    keyword?: string;
+    categoryId?: string;
+    minPrice?: number;
+    maxPrice?: number;
+
+    isPreOrder?: boolean;
+    isFeatured?: boolean;
+
+    origin?: string;
+
+    page?: number;
+    size?: number;
+    sortBy?: string;
+}

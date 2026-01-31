@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Store, MessageCircle } from "lucide-react";
 import { ProductActions } from "@/components/product/product-actions";
 import Link from "next/link";
+import { Role } from "@/types/auth.types";
 
 interface ProductSellerInfoProps {
     product: ProductResponse;
@@ -86,12 +87,14 @@ export function ProductSellerInfo({ product, canBuy, isOutOfStock }: ProductSell
             </div>
 
             {/* Buttons Action (Mua hàng) */}
+            {user && !user.roles.includes(Role.ADMIN) && (
             <ProductActions
                 productId={product.id}
                 availableQuantity={product.availableQuantity}
                 isPreOrder={product.isPreOrder}
                 canBuy={canBuy}
             />
+            )}
 
             {!canBuy && !isOutOfStock && (
                 <p className="text-center text-red-500 text-sm mt-1">

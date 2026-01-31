@@ -1,5 +1,7 @@
-import { CreateProductRequest, PageResponse, ProductResponse, ProductSearchParams, ProductStatus, UpdateProductRequest } from "@/types/product.type";
+import { CreateProductRequest, PageResponse, ProductResponse, ProductSearchParams, ProductSearchRequest, ProductStatus, UpdateProductRequest } from "@/types/product.type";
 import apiClient from "@/lib/axios";
+import axios from "@/lib/axios";
+import { cleanParams } from "@/lib/utils";
 
 export const ProductService = {
 
@@ -58,7 +60,7 @@ export const ProductService = {
   },
 
   // 2. API Duyệt/Từ chối sản phẩm (ROLE_ADMIN)
-  updateProductStatus: async (id: string, status: "ACTIVE" | "REJECTED", reason?: string) => {
+  updateProductStatus: async (id: string, status: "ACTIVE" | "REJECTED" | "CLOSED", reason?: string) => {
     return await apiClient.put<void>(`/products/${id}/status`, {
       status: status,
       reason: reason
@@ -146,11 +148,26 @@ export const ProductService = {
 
   async getProductsBySeller(sellerId: string, page = 0, size = 12) {
     const res = await apiClient.get(`/products/shop/${sellerId}`, {
-        params: {
-            page: page,
-            size: size
-        }
+      params: {
+        page: page,
+        size: size
+      }
     });
     return res.data;
   },
-};
+
+  async searchProducts(params: ProductSearchRequest): Promise<PageResponse<ProductResponse>> {
+    // 1. Làm sạch params trước
+    const cleanedParams = cleanParams(params);
+
+    // 2. Để Axios tự xử lý việc serialize (nó xử lý tốt cả mảng và encode)
+    const res = await apiClient.get<PageResponse<ProductResponse>>(
+      "/products/search",
+      { 
+        params: cleanedParams 
+      }
+    );
+    
+    return res.data;
+},
+}

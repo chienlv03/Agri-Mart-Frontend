@@ -103,7 +103,7 @@ export function NotificationBell() {
                             <p className={cn("text-sm text-gray-900 line-clamp-2", !notification.isRead && "font-semibold")}>
                                 {notification.title}
                             </p>
-                            <p className="text-xs text-gray-500 line-clamp-2">
+                            <p className="text-xs text-gray-500">
                                 {notification.message}
                             </p>
                             <p className="text-[10px] text-gray-400">

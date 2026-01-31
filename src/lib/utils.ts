@@ -24,3 +24,26 @@ export function formatCurrency(amount: number | string | null | undefined): stri
     maximumFractionDigits: 0, // Tiền Việt không có số lẻ thập phân
   }).format(value);
 }
+
+
+// Hàm loại bỏ các key có giá trị null, undefined hoặc chuỗi rỗng
+export function cleanParams(params: any) {
+  const newParams: any = {};
+  Object.keys(params).forEach((key) => {
+    if (params[key] !== null && params[key] !== undefined && params[key] !== "") {
+      newParams[key] = params[key];
+    }
+  });
+  return newParams;
+}
+
+export function toCamelCaseName(name: string): string {
+  if (!name) return "";
+
+  return name
+    .trim()
+    .toLowerCase()
+    .split(/\s+/) // tách theo nhiều khoảng trắng
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}

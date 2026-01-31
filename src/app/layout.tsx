@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SellerFloatingButton } from "@/components/shared/seller-floating-button";
-// 1. Import Provider
 import { NotificationProvider } from "@/components/providers/notification-provider";
+import { Suspense } from "react"; // 1. Import Suspense
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,13 +31,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        {/* 2. Bọc NotificationProvider ở đây */}
         <NotificationProvider>
-            <main className="grow">{children}</main>
+            {/* 2. Bọc Suspense để tránh lỗi de-opt static generation khi dùng search params */}
+            <Suspense fallback={<div className="min-h-screen bg-white"></div>}>
+               <main className="grow">{children}</main>
+            </Suspense>
             
             <SellerFloatingButton />
-            
-            {/* Toaster để hiển thị popup thông báo real-time */}
             <Toaster position="top-center" richColors />
         </NotificationProvider>
       </body>

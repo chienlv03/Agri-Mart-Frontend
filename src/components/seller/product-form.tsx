@@ -4,14 +4,14 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea"; // Thêm Textarea cho mô tả
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductService } from "@/services/product.service";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Category } from "@/types/product.type";
 import { useRouter } from "next/navigation";
-import { Loader2, X, ImagePlus, Video, FileVideo, MapPin } from "lucide-react"; // Thêm icon Video
+import { Loader2, X, ImagePlus, Video, FileVideo, MapPin } from "lucide-react";
 import { CategoryService } from "@/services/category.service";
 import Image from "next/image";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
@@ -145,8 +145,6 @@ export function ProductForm({ initialData, isEditMode }: ProductFormProps) {
         setLoading(false);
         return;
       }
-
-      // --- KHÔNG TẠO FORMDATA Ở ĐÂY NỮA ---
 
       // 1. Tạo Object dữ liệu thuần (Plain Object)
       // Object này phải khớp với interface CreateProductRequest / UpdateProductRequest
@@ -301,7 +299,7 @@ export function ProductForm({ initialData, isEditMode }: ProductFormProps) {
           {/* Option 3: Hỏa tốc */}
           <label className={`cursor-pointer rounded-lg border p-4 hover:bg-gray-50 transition-all ${salesType === 'instant' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : ''}`}>
             <div className="flex items-center gap-2 mb-2">
-              <input type="radio" name="salesType" checked={salesType === 'instant'} onChange={() => setSalesType('instant')} className="h-4 w-4 text-blue-600" />
+              <input type="radio" name="salesType" checked={salesType === 'instant'} onChange={() => setSalesType('instant')} className="h-4 w-4 text-blue-600" disabled/>
               <span className="font-bold text-sm text-blue-700">Giao Hỏa tốc</span>
             </div>
             <p className="text-xs text-gray-500">Chỉ giao nhanh trong phạm vi gần (Hàng tươi sống, dễ hỏng).</p>

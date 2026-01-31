@@ -10,9 +10,9 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { OrderService } from "@/services/order.service";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Role } from "@/types/auth.types";
+// Không cần import Role nữa vì ta so sánh ID trực tiếp
 
-// 1. Định nghĩa danh sách lý do riêng biệt
+// 1. Giữ nguyên danh sách lý do
 const BUYER_REASONS = [
   "Muốn thay đổi địa chỉ/số điện thoại nhận hàng",
   "Muốn thay đổi sản phẩm trong đơn hàng",
@@ -32,12 +32,12 @@ const SELLER_REASONS = [
 
 interface CancelOrderDialogProps {
   orderId: string;
+  sellerId: string; // <--- THÊM PROP NÀY (ID người bán của đơn hàng)
   onSuccess?: () => void;
   trigger?: React.ReactNode;
-  isSeller?: boolean; // Thêm prop này để xác định ai đang hủy
 }
 
-export function CancelOrderDialog({ orderId, onSuccess, trigger }: CancelOrderDialogProps) {
+export function CancelOrderDialog({ orderId, sellerId, onSuccess, trigger }: CancelOrderDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState("");
@@ -45,10 +45,13 @@ export function CancelOrderDialog({ orderId, onSuccess, trigger }: CancelOrderDi
 
   const { user } = useAuthStore();
 
-  // 2. Chọn danh sách lý do dựa trên role
-  const reasons = user?.roles.includes(Role.SELLER) ? SELLER_REASONS : BUYER_REASONS;
-  const dialogTitle = user?.roles.includes(Role.SELLER) ? "Từ chối / Hủy đơn hàng" : "Hủy đơn hàng";
-  const dialogDesc = user?.roles.includes(Role.SELLER) 
+  // 2. LOGIC QUYẾT ĐỊNH VAI TRÒ (Quan trọng)
+  // Nếu ID người đang đăng nhập trùng với ID người bán của đơn hàng này => Họ đang đóng vai trò Seller
+  const isActingAsSeller = user?.id === sellerId;
+
+  const reasons = isActingAsSeller ? SELLER_REASONS : BUYER_REASONS;
+  const dialogTitle = isActingAsSeller ? "Từ chối / Hủy đơn hàng" : "Hủy đơn hàng";
+  const dialogDesc = isActingAsSeller 
     ? "Bạn có chắc chắn muốn hủy đơn hàng này không? Hành động này không thể hoàn tác."
     : "Bạn có chắc chắn muốn hủy đơn hàng này? Vui lòng chọn lý do bên dưới.";
 
@@ -67,12 +70,12 @@ export function CancelOrderDialog({ orderId, onSuccess, trigger }: CancelOrderDi
 
     try {
       setLoading(true);
-      // Gọi API hủy đơn (Backend đã sửa để chấp nhận cả Buyer và Seller)
+      // Gọi API hủy đơn
       await OrderService.cancelOrder(orderId, finalReason);
       
-      toast.success(user?.roles.includes(Role.SELLER) ? "Đã hủy đơn hàng thành công" : "Đã gửi yêu cầu hủy đơn");
+      toast.success("Đã gửi yêu cầu hủy đơn thành công");
       setOpen(false);
-      onSuccess?.(); // Refresh lại dữ liệu bên ngoài
+      onSuccess?.(); 
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Có lỗi xảy ra khi hủy đơn");
     } finally {

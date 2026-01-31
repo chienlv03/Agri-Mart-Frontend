@@ -1,3 +1,4 @@
+import { AuthService } from "@/services/auth.service";
 import { User } from "@/types/user.type";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -11,6 +12,7 @@ interface AuthState {
   login: (user: User) => void;
   logout: () => void;
   saveSellerProfile: (user: User) => void;
+  checkAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -38,10 +40,19 @@ export const useAuthStore = create<AuthState>()(
       saveSellerProfile: (user) => set({
         user: {
           ...user,
-          fullName: user.fullName,
           email: user.email,
         }
-      })
+      }),
+
+      checkAuth: async () => {
+        try {
+          const response = await AuthService.getMe();
+          const userData: User = response.data;
+          set({ isAuthenticated: true, user: userData });
+        } catch (error) {
+          set({ isAuthenticated: false, user: null });
+        }
+      }
     }),
     {
       name: "auth-storage", // Vẫn lưu localStorage để F5 không bị mất thông tin User

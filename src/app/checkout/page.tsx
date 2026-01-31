@@ -6,7 +6,9 @@ import Image from "next/image";
 import { toast } from "sonner";
 import {
   MapPin, Truck, Store,
-  Loader2, Receipt
+  Loader2, Receipt,
+  User2,
+  User
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,7 @@ import { OrderService } from "@/services/order.service";
 import { ProductService } from "@/services/product.service"; // Cần để lấy info SP Mua ngay
 import { CheckoutResponse } from "@/types/checkout.type";
 import { CartItemResponse } from "@/types/order.types"; // Import Type
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, toCamelCaseName } from "@/lib/utils";
 import { BackButton } from "@/components/shared/back-button";
 
 interface Address {
@@ -78,7 +80,7 @@ export default function CheckoutPage() {
             price: product.price,
             quantity: quantity,
             totalPrice: product.price * quantity,
-            sellerId: product.sellerProfileResponse?.sellerId || "", // Quan trọng để nhóm shop
+            sellerId: product.sellerProfileResponse?.sellerId || "",
             sellerName: product.sellerProfileResponse?.fullName || "Cửa hàng khác",
             isPreOrder: product.isPreOrder || false,
           };
@@ -124,7 +126,6 @@ export default function CheckoutPage() {
       try {
         const requestData = {
           addressId: selectedAddressId,
-          // Gửi danh sách item hiện tại (dù là cart hay buy_now)
           items: itemsToCheckout.map(item => ({
             productId: item.productId,
             quantity: item.quantity
@@ -225,9 +226,15 @@ export default function CheckoutPage() {
                 <Card key={shopOrder.sellerId || index} className="shadow-sm border border-gray-200 overflow-hidden">
                   {/* Header Shop */}
                   <div className="bg-white px-6 py-4 border-b flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <Store className="w-5 h-5 text-gray-700" />
-                      <span className="font-bold text-gray-800 text-base">{shopOrder.sellerName}</span>
+                    <div className="flex flex-col items-start gap-3">
+                      <div className="flex items-center gap-2">
+                        <Store className="w-5 h-5 text-gray-700" />
+                        <span className="font-bold text-gray-800 text-base">{toCamelCaseName(shopOrder.farmName)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="font-bold text-gray-800 text-base">{toCamelCaseName(shopOrder.sellerName)}</span>
+                      </div>
                     </div>
                     {shopOrder.distance && (
                       <Badge variant="outline" className="text-xs font-normal bg-gray-50 text-gray-600 border-gray-200">
@@ -250,7 +257,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div className="flex-1 flex flex-col justify-between">
-                          <h3 className="text-sm font-medium text-gray-900 line-clamp-2">{item.productName}</h3>
+                          <h3 className="text-sm font-medium text-gray-900 line-clamp-2">{toCamelCaseName(item.productName)}</h3>
                           {item.isPreOrder && (
                             <Badge variant="secondary" className="mt-1 text-[10px] bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100">
                               Hàng đặt trước
@@ -286,7 +293,7 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* --- CỘT PHẢI: INFO & PAYMENT --- */}
+          {/* INFO & PAYMENT --- */}
           <div className="lg:col-span-1">
             <div className="sticky top-4 space-y-4">
 
@@ -353,7 +360,7 @@ export default function CheckoutPage() {
                     </div>
 
                     <div className={`flex items-start space-x-3 border p-2 rounded cursor-pointer transition-all ${paymentMethod === 'VNPAY' ? 'border-green-500 bg-green-50/50' : 'hover:bg-gray-50'}`}>
-                      <RadioGroupItem value="VNPAY" id="vnpay" className="mt-1 text-green-600" />
+                      <RadioGroupItem value="VNPAY" id="vnpay" className="mt-1 text-green-600" disabled />
                       <Label htmlFor="vnpay" className="cursor-pointer text-sm font-medium text-gray-700">
                         Ví VNPAY / Ngân hàng
                         <span className="block text-[10px] text-gray-500 font-normal mt-0.5">Quét mã QR qua ứng dụng ngân hàng</span>

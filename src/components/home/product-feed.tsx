@@ -1,40 +1,47 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ProductCard } from "@/components/product/product-cart";
 import { ChevronRight, MapPin } from "lucide-react";
 import { ProductService } from "@/services/product.service";
 import { ProductResponse } from "@/types/product.type";
+import { ProductCard } from "@/components/product/product-cart";
+import { ProductListClient } from "@/components/product/product-list-client"; // Import Client Component
 
 export async function ProductFeed() {
-  let products: ProductResponse[] = [];
+  let initialProducts: ProductResponse[] = [];
+  let isLastPage = true;
+
   try {
-    const res = await ProductService.getActiveProducts({ page: 0, size: 20 });
-    products = res.content;
+    // Fetch trang 0 ban đầu
+    const res = await ProductService.getActiveProducts({ page: 0, size: 10 });
+    initialProducts = res.content;
+    isLastPage = res.last;
   } catch (error) {
     console.error("Lỗi tải sản phẩm:", error);
   }
 
+  // Helper map cho phần Server Side (Phần "Gần bạn nhất")
   const mapProductToCardProps = (p: ProductResponse) => ({
     productId: p.id,
     sellerId: p.sellerProfileResponse?.sellerId || "",
     name: p.name,
     thumbnail: p.thumbnail || "/placeholder.jpg",
-    images: p.images || [], // QUAN TRỌNG: Truyền mảng ảnh vào đây
+    images: p.images || [],
     price: p.price,
     unit: p.unit,
     location: p.sellerProfileResponse?.farmAddress || "Toàn quốc",
     rating: p.ratingAverage || 5.0,
     soldCount: p.soldCount || 0,
     availableQuantity: p.availableQuantity || 0,
-    isFlashSale: false, // Map từ API nếu có
+    isFlashSale: false,
     isPreOrder: p.isPreOrder || false,
-    expectedHarvestDate: p.expectedHarvestDate // Truyền ngày thu hoạch
+    expectedHarvestDate: p.expectedHarvestDate,
+    sellerName: p.sellerProfileResponse?.fullName
   });
 
   return (
     <div className="space-y-10">
       
-      {/* Section 1: Gần bạn nhất (Tạm thời lấy 5 sản phẩm đầu) */}
+      {/* Section 1: Gần bạn nhất (Giữ nguyên Server Side Rendering cho SEO và tốc độ) */}
+      {/* Logic: Lấy 5 sản phẩm đầu tiên của trang 0 để hiển thị demo */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -46,11 +53,11 @@ export async function ProductFeed() {
           </Link>
         </div>
         
-        {products.length > 0 ? (
+        {initialProducts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {products.slice(0, 5).map((product) => (
+              {initialProducts.slice(0, 5).map((product) => (
                 <ProductCard 
-                    key={product.id} 
+                    key={`near-${product.id}`} 
                     product={mapProductToCardProps(product)} 
                 />
               ))}
@@ -60,7 +67,7 @@ export async function ProductFeed() {
         )}
       </section>
 
-      {/* Section 2: Gợi ý hôm nay (Full list) */}
+      {/* Section 2: Gợi ý hôm nay (Chuyển sang Client Component để có Load More) */}
       <section>
         <div className="flex items-center justify-center mb-6">
           <h2 className="text-xl font-bold text-green-800 uppercase tracking-wide border-b-2 border-green-500 pb-1">
@@ -68,24 +75,11 @@ export async function ProductFeed() {
           </h2>
         </div>
         
-        {products.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {products.map((product) => (
-                <ProductCard 
-                    key={`feed-${product.id}`} 
-                    product={mapProductToCardProps(product)} 
-                />
-              ))}
-            </div>
-        ) : (
-            <div className="text-center py-10 text-gray-500">Hệ thống đang cập nhật sản phẩm mới.</div>
-        )}
-        
-        <div className="mt-8 text-center">
-          <Button variant="outline" className="min-w-[200px] hover:text-green-600 hover:border-green-600">
-            Xem thêm
-          </Button>
-        </div>
+        {/* Truyền dữ liệu khởi tạo vào Client Component */}
+        <ProductListClient 
+            initialProducts={initialProducts} 
+            initialIsLast={isLastPage} 
+        />
       </section>
     </div>
   );

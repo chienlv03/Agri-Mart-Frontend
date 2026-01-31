@@ -6,6 +6,7 @@ import {
   RegisterRequest,
   SendOtpRequest
 } from "@/types/auth.types";
+import { refresh } from "next/cache";
 
 export const AuthService = {
   // 1. Gửi OTP
@@ -39,4 +40,8 @@ export const AuthService = {
     );
     return res.data;
   },
+
+  refreshToken: async () => {
+    return await apiClient.post<AuthResponse>("/auth/refresh");
+  }
 };

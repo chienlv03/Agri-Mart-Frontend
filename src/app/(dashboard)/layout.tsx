@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Menu, Package2, Home, ShoppingCart, Tractor, 
-  ShoppingBag, Heart, MapPin, User, Users, BarChart3, ListTree,
-  ShieldAlert, ClipboardCheck, 
+  ShoppingBag, User, Users, BarChart3, ListTree,
+  ShieldAlert, ClipboardCheck,
+  MapPin, 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Role } from "@/types/auth.types";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
@@ -34,15 +36,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/seller/orders/sold", icon: <ShoppingCart className="h-4 w-4" />, label: "Đơn hàng bán" },
     { href: "/seller/orders/bought", icon: <ShoppingBag className="h-4 w-4" />, label: "Đơn hàng mua" },
     { href: "/seller/profile", icon: <User className="h-4 w-4" />, label: "Hồ sơ nhà bán hàng" },
-    // { href: "/address", icon: <MapPin className="h-4 w-4" />, label: "Sổ địa chỉ" },
+    { href: "/seller/address", icon: <MapPin className="h-4 w-4" />, label: "Sổ địa chỉ" },
+    { href: "/seller/stats/bought", icon: <BarChart3 className="h-4 w-4" />, label: "Thống kê mua" },
+    { href: "/seller/stats/sold", icon: <BarChart3 className="h-4 w-4" />, label: "Thống kê bán" },
   ];
 
   // Menu cho Người mua (Buyer)
   const buyerLinks = [
-    { href: "/buyer/dashboard", icon: <User className="h-4 w-4" />, label: "Hồ sơ của tôi" },
+    { href: "/buyer/dashboard", icon: <User className="h-4 w-4" />, label: "Tổng quan" },
     { href: "/buyer/orders/bought", icon: <ShoppingBag className="h-4 w-4" />, label: "Đơn mua" },
     // { href: "/buyer/wishlist", icon: <Heart className="h-4 w-4" />, label: "Yêu thích" },
-    // { href: "/address", icon: <MapPin className="h-4 w-4" />, label: "Sổ địa chỉ" },
+    { href: "/buyer/address", icon: <MapPin className="h-4 w-4" />, label: "Sổ địa chỉ" },
+    { href: "/buyer/stats", icon: <BarChart3 className="h-4 w-4" />, label: "Thống kê" },
   ];
 
   // Logic chọn menu
@@ -62,6 +67,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       links = sellerLinks;
       title = "Kênh Người Bán";
       iconTitle = <Tractor className="h-6 w-6 text-green-600" />;
+  } else if ((pathname.startsWith("/buyer"))) {
+      links = buyerLinks;
+      title = "Kênh Người Mua";
+      iconTitle = <User className="h-6 w-6 text-blue-600" />;
   }
 
   return (
@@ -116,6 +125,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </SheetContent>
           </Sheet>
           <div className="w-full flex-1"></div>
+          <NotificationBell />
           <UserNav />
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/10">

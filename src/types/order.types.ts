@@ -38,6 +38,7 @@ export interface OrderResponse {
   id: string
   sellerId: string
   sellerName: string
+  sellerAvatarUrl: string
   totalAmount: number
   shippingFee: number
   finalAmount: number
@@ -74,4 +75,82 @@ export interface PageResponse<T> {
   last: boolean;         // Có phải trang cuối không?
   first: boolean;        // Có phải trang đầu không?
   empty: boolean;
+}
+
+export interface MonthlyStat {
+  month: number;   // 1 -> 12
+  total: number;   // Tổng tiền trong tháng
+}
+
+
+export interface BuyerStatsResponse {
+  totalSpent: number;
+
+  totalOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+
+  // Biểu đồ chi tiêu theo tháng
+  monthlySpending: MonthlyStat[];
+
+  // Phân bổ trạng thái đơn hàng
+  statusDistribution: Record<string, number>;
+}
+
+export interface SellerStatsResponse {
+  totalSpent: number;
+
+  totalOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  totalProducts: number;
+
+  // Biểu đồ chi tiêu theo tháng
+  monthlySpending: MonthlyStat[];
+
+  // Phân bổ trạng thái đơn hàng
+  statusDistribution: Record<string, number>;
+}
+
+export interface DailyRevenue {
+  date: string; 
+  total: number;
+}
+
+export interface SellerDashboardStatsResponse {
+  revenue: number;
+  pendingOrders: number;
+  products: number;
+  soldOrders: number;
+  boughtOrders: number;
+  chartData: DailyRevenue[];
+}
+
+
+export interface AdminDashboardResponse {
+  // --- DỮ LIỆU THẬT ---
+  totalUsers: number;        // Long -> number
+  activeProducts: number;
+
+  // --- DỮ LIỆU FAKE ---
+  totalGMV: number;          // BigDecimal -> number
+  onlineUsers: number;
+  totalOrders: number;
+
+  // Biểu đồ & List
+  chartData: DailyStat[];
+  recentOrders: RecentOrder[];
+}
+
+export interface DailyStat {
+  date: string;
+  gmv: number;
+}
+
+export interface RecentOrder {
+  id: string;
+  user: string;
+  amount: number;
+  status: string;
+  time: string;
 }

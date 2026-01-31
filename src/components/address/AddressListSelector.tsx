@@ -55,8 +55,6 @@ export function AddressListSelector({ onSelect, selectedId, onCancel }: AddressL
   // --- 2. XỬ LÝ CHỌN ---
   const handleSelect = (address: AddressResponse) => {
     onSelect(address.id);
-    // Nếu component nằm trong Dialog, DialogTrigger bên ngoài sẽ tự đóng (nếu dùng asChild) 
-    // hoặc bạn cần xử lý đóng modal ở component cha.
     toast.success("Đã chọn địa chỉ giao hàng.");
   };
 
@@ -176,7 +174,6 @@ function CreateAddressForm({ onSuccess, onCancel }: { onSuccess: (data: AddressR
       isDefault: false,
       latitude: 0,
       longitude: 0,
-      // Các trường ID sẽ được set khi chọn Select
     }
   });
 

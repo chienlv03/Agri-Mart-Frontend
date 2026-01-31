@@ -21,7 +21,7 @@ export interface UpdateSellerProfileRequest {
   farmDescription?: string;
   farmAddress?: string;
   farmPhotos?: string[];
-  businessLicenseUrls?: string[];
+  businessLicensesImages?: string[];
 
   // --- Tọa độ (Quan trọng để tính ship) ---
   latitude?: number;
@@ -57,7 +57,7 @@ export interface SellerInfo {
   farmDescription?: string;
   farmAddress?: string;
   farmPhotos?: string[];
-  businessLicenseUrls?: string[];
+  businessLicensesUrls?: string[];
 
   latitude?: number;
   longitude?: number;

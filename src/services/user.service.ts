@@ -8,36 +8,30 @@ export const UserService = {
     idCardFrontFile?: File | null,  // Ảnh mặt trước CCCD (Mới)
     idCardBackFile?: File | null,   // Ảnh mặt sau CCCD (Mới)
     farmImages?: File[],             // Ảnh vườn
-    businessLicenseUrls?: File[]    // Ảnh giấy phép kinh doanh
+    businessLicensesImages?: File[]    // Ảnh giấy phép kinh doanh
   ) => {
     const formData = new FormData();
 
     // 1. Pack JSON data
-    // Backend @RequestPart("data")
     const jsonBlob = new Blob([JSON.stringify(data)], { type: "application/json" });
     formData.append("data", jsonBlob);
 
     // 2. Avatar
-    // Backend @RequestPart("avatar")
     if (avatarFile) {
       formData.append("avatar", avatarFile);
     }
 
     // 3. Ảnh CCCD Mặt trước (Mới)
-    // Backend @RequestPart("idCardFront")
     if (idCardFrontFile) {
       formData.append("idCardFront", idCardFrontFile);
     }
 
     // 4. Ảnh CCCD Mặt sau (Mới)
-    // Backend @RequestPart("idCardBack")
     if (idCardBackFile) {
       formData.append("idCardBack", idCardBackFile);
     }
 
     // 5. Ảnh vườn
-    // Backend @RequestPart("farmImages") 
-    // Lưu ý: Tên key phải là "farmImages" để khớp với List<MultipartFile> farmImages bên Java
     if (farmImages && farmImages.length > 0) {
       farmImages.forEach((file) => {
         formData.append("farmImages", file);
@@ -45,11 +39,9 @@ export const UserService = {
     }
 
     // 6. Ảnh giấy phép kinh doanh
-    // Backend @RequestPart("businessLicenseUrls") 
-    // Lưu ý: Tên key phải là "businessLicenseUrls" để khớp với List<MultipartFile> businessLicenseUrls bên Java
-    if (businessLicenseUrls && businessLicenseUrls.length > 0) {
-      businessLicenseUrls.forEach((file) => {
-        formData.append("businessLicenseUrls", file);
+    if (businessLicensesImages && businessLicensesImages.length > 0) {
+      businessLicensesImages.forEach((file) => {
+        formData.append("businessLicensesImages", file);
       });
     }
 

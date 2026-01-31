@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation"; // Import router
 import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   MapPin, Star, Plus, Package, TrendingUp,
   Calendar, ChevronLeft, ChevronRight,
-  UserCheck, Shield, Zap, Clock // Import icon mới
+  UserCheck, Shield, Clock, // Import icon mới
+  User
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, toCamelCaseName } from "@/lib/utils";
 import { AddToCartModal } from "@/components/product/add-to-cart-modal";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -35,6 +35,7 @@ interface ProductCardProps {
     availableQuantity: number;
     isPreOrder?: boolean;
     expectedHarvestDate?: string | null;
+    sellerName?: string;
   };
 }
 
@@ -48,11 +49,11 @@ interface ActionButtonProps {
 }
 
 function ActionButton({ isOwner, isAdmin, isOutOfStock, isPreOrder, onClick }: ActionButtonProps) {
-  
+
   // A. Nếu là ADMIN -> Chặn
   if (isAdmin) {
     return (
-      <Button 
+      <Button
         className="w-full h-9 text-sm bg-gray-100 text-gray-500 border-gray-200 cursor-default hover:bg-gray-100"
         variant="outline"
         onClick={(e) => e.preventDefault()} // Chặn click lan ra thẻ cha
@@ -65,7 +66,7 @@ function ActionButton({ isOwner, isAdmin, isOutOfStock, isPreOrder, onClick }: A
   // B. Nếu là chủ sở hữu -> Chặn
   if (isOwner) {
     return (
-      <Button 
+      <Button
         className="w-full h-9 text-sm bg-gray-100 text-gray-500 border-gray-200 cursor-default hover:bg-gray-100"
         variant="outline"
         onClick={(e) => e.preventDefault()}
@@ -78,11 +79,11 @@ function ActionButton({ isOwner, isAdmin, isOutOfStock, isPreOrder, onClick }: A
   // C. Nếu hết hàng -> Chặn
   if (isOutOfStock) {
     return (
-      <Button 
+      <Button
         className="w-full h-9 text-sm bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
         disabled
       >
-         <Plus className="mr-1 h-4 w-4" /> Hết hàng
+        <Plus className="mr-1 h-4 w-4" /> Hết hàng
       </Button>
     );
   }
@@ -90,7 +91,7 @@ function ActionButton({ isOwner, isAdmin, isOutOfStock, isPreOrder, onClick }: A
   // D. Nếu là Đặt trước -> Nút màu Cam, icon Clock/Zap
   if (isPreOrder) {
     return (
-      <Button 
+      <Button
         onClick={onClick}
         className="w-full h-9 text-sm bg-orange-600 text-white hover:bg-orange-700 border border-orange-600 transition-all duration-300 shadow-sm"
       >
@@ -101,17 +102,16 @@ function ActionButton({ isOwner, isAdmin, isOutOfStock, isPreOrder, onClick }: A
 
   // E. Bình thường -> Nút Thêm vào giỏ (Màu xanh)
   return (
-    <Button 
+    <Button
       onClick={onClick}
       className="w-full h-9 text-sm bg-green-50 text-green-700 hover:bg-green-600 hover:text-white border border-green-200 transition-all duration-300"
     >
-       <Plus className="mr-1 h-4 w-4" /> Thêm vào giỏ
+      <Plus className="mr-1 h-4 w-4" /> Thêm vào giỏ
     </Button>
   );
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const router = useRouter(); // Khởi tạo Router
   const user = useAuthStore((state) => state.user);
   const isOwner = (user && user.id === product.sellerId) ?? false;
   const isAdmin = useAuthStore((state) => state.user?.roles?.includes(Role.ADMIN)) ?? false;
@@ -125,15 +125,6 @@ export function ProductCard({ product }: ProductCardProps) {
   const isOutOfStock = product.availableQuantity <= 0;
   const isLowStock = product.availableQuantity > 0 && product.availableQuantity < 10;
   const shouldDisableBuy = isOwner || isAdmin || isOutOfStock;
-
-  // --- HANDLER: Mua ngay (Pre-order) ---
-  const handlePreOrder = (e: React.MouseEvent) => {
-    e.preventDefault(); // Chặn sự kiện click lan ra (nếu card bọc trong Link)
-    e.stopPropagation();
-    
-    // Chuyển hướng sang trang checkout với params đúng chuẩn "Mua ngay"
-    router.push(`/checkout?type=buy_now&productId=${product.productId}&quantity=1`);
-  };
 
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -176,7 +167,6 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* ... (Phần slider control giữ nguyên) ... */}
         {imageList.length > 1 && !isOutOfStock && (
           <>
             <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-20">
@@ -213,7 +203,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
         <Link href={`/products/${product.productId}`} className="group-hover:text-green-700 transition-colors">
           <h3 className="line-clamp-2 text-sm font-medium text-gray-900 min-h-10 mb-1" title={product.name}>
-            {product.name}
+            {toCamelCaseName(product.name)}
           </h3>
         </Link>
 
@@ -223,6 +213,14 @@ export function ProductCard({ product }: ProductCardProps) {
             {formatCurrency(product.price)}
           </span>
           <span className="text-xs text-gray-500">/{product.unit}</span>
+        </div>
+
+        {/* thông tin người bán */}
+        <div className="mt-3 text-xs text-gray-500 border-t pt-2 space-y-1.5">
+          <div className="flex items-center gap-1 min-w-0 max-w-[90%]">
+            <User className="h-3 w-3 shrink-0 mr-1" />
+            <span>{product.sellerName}</span>
+          </div>
         </div>
 
         {/* ... (Phần thông tin location, rating) ... */}
@@ -259,39 +257,34 @@ export function ProductCard({ product }: ProductCardProps) {
 
       {/* 3. NÚT MUA HÀNG (FOOTER) */}
       <CardFooter className="p-3 pt-0">
-        
-        {/* CASE 1: Bị Disable (Admin/Owner/Hết hàng) */}
+
+        {/* CASE 1: Bị Disable (Admin/Owner/Hết hàng) - Giữ nguyên */}
         {shouldDisableBuy ? (
-          <ActionButton 
-              isOwner={isOwner} 
-              isAdmin={isAdmin} 
-              isOutOfStock={isOutOfStock} 
+          <ActionButton
+            isOwner={isOwner}
+            isAdmin={isAdmin}
+            isOutOfStock={isOutOfStock}
           />
-        ) 
-        // CASE 2: Hàng Đặt trước -> Nút Mua ngay (Không Modal)
-        : product.isPreOrder ? (
-          <ActionButton 
-              isOwner={isOwner} 
-              isAdmin={isAdmin} 
+        ) : (
+          /* CASE 2 & 3: Cho phép mua (Gộp chung logic) */
+          /* Dùng mode để phân biệt hành vi: 'buy_now' (đặt trước) hoặc 'add_to_cart' (thường) */
+          <AddToCartModal
+            mode={product.isPreOrder ? "buy_now" : "add_to_cart"}
+            product={{
+              id: product.productId,
+              name: product.name,
+              price: product.price,
+              image: product.thumbnail,
+              unit: product.unit,
+              availableQuantity: product.availableQuantity
+            }}
+          >
+            {/* Nút bấm (Trigger) */}
+            <ActionButton
+              isOwner={isOwner}
+              isAdmin={isAdmin}
               isOutOfStock={isOutOfStock}
-              isPreOrder={true}
-              onClick={handlePreOrder} // Gọi hàm redirect
-          />
-        ) 
-        // CASE 3: Hàng Thường -> Nút Thêm vào giỏ (Có Modal)
-        : (
-          <AddToCartModal product={{
-            id: product.productId,
-            name: product.name,
-            price: product.price,
-            image: product.thumbnail,
-            unit: product.unit,
-            availableQuantity: product.availableQuantity
-          }}>
-            <ActionButton 
-                isOwner={isOwner} 
-                isAdmin={isAdmin} 
-                isOutOfStock={isOutOfStock} 
+              isPreOrder={product.isPreOrder} // Truyền prop này để nút hiển thị màu cam
             />
           </AddToCartModal>
         )}

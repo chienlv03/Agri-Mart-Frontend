@@ -25,6 +25,7 @@ export interface CheckoutItemResponse {
 // Nhóm đơn hàng theo Shop
 export interface ShopOrderGroup {
   sellerId: string;
+  farmName: string;
   sellerName: string;
   distance: number;       // Khoảng cách (km)
   items: CheckoutItemResponse[];

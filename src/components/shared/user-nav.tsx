@@ -22,8 +22,9 @@ export function UserNav() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
 
-  const isSeller = user?.roles?.includes(Role.SELLER);
+  const isSeller = user?.roles?.includes(Role.SELLER) && user?.roles?.includes(Role.BUYER);
   const isAdmin = user?.roles?.includes(Role.ADMIN);
+  const isBuyer = user?.roles?.includes(Role.BUYER) && !user?.roles?.includes(Role.SELLER);
 
   // Hàm xử lý Đăng xuất
   const handleLogout = async () => {
@@ -77,7 +78,7 @@ export function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => {
             // Điều hướng thông minh dựa trên Role
-            if (user?.roles.includes(Role.SELLER)) router.push("/seller/dashboard");
+            if (user?.roles.includes(Role.SELLER)) router.push("/seller/profile");
             else if (user?.roles.includes(Role.ADMIN)) router.push("/admin/dashboard");
             else router.push("/buyer/dashboard"); // Khách thì vào Buyer Dashboard
           }}>
@@ -86,12 +87,20 @@ export function UserNav() {
           </DropdownMenuItem>
 
           {/* Chỉ hiện Dashboard nếu là SELLER hoặc ADMIN */}
-          {(isSeller || isAdmin) && (
-            <DropdownMenuItem onClick={() => router.push(isSeller ? "/seller/dashboard" : "/admin/dashboard")}>
-              <LayoutDashboard className="mr-2 h-4 w-4" />
-              <span>Trang quản lý</span>
-            </DropdownMenuItem>
-          )}
+
+          <DropdownMenuItem onClick={() => {
+            if (isSeller) {
+              router.push("/seller/dashboard");
+            } else if (isAdmin) {
+              router.push("/admin/dashboard");
+            } else {
+              router.push("/buyer/dashboard");
+            }
+          }}>
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            <span>Trang quản lý</span>
+          </DropdownMenuItem>
+
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">

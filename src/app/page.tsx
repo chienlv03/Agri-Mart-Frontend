@@ -1,12 +1,13 @@
 import { Header } from "@/components/shared/header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, MapPin, Filter } from "lucide-react";
+import { MapPin, Filter } from "lucide-react";
 
 // Import các component con
 import { HomeBanner } from "@/components/home/home-banner";
 import { CategoryList } from "@/components/home/category-list";
 import { ProductFeed } from "@/components/home/product-feed";
+// Import SearchBar vừa tạo
+import { SearchBar } from "@/components/shared/search-bar";
 
 // Trang chủ là Server Component (Async)
 export default async function HomePage() {
@@ -18,13 +19,9 @@ export default async function HomePage() {
         {/* Thanh tìm kiếm & Địa điểm (Sticky) */}
         <div className="sticky top-16 z-40 bg-white border-b py-3 px-4 shadow-sm">
           <div className="container mx-auto flex gap-3 max-w-6xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              <Input 
-                placeholder="Tìm kiếm: Cà chua, Gạo ST25..." 
-                className="pl-10 bg-gray-50 border-gray-200 focus-visible:ring-green-500"
-              />
-            </div>
+            
+            <SearchBar />
+
             <Button variant="outline" className="hidden md:flex gap-2 text-gray-600 hover:text-green-600 hover:border-green-600">
               <MapPin className="h-4 w-4 text-green-600" />
               <span>Giao đến: <b>Hà Nội</b></span>
